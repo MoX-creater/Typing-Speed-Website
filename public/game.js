@@ -1,6 +1,6 @@
 const content = `Batman is a hero who protects Gotham City. After losing his parents, he trains hard to fight crime. He uses his intelligence, strength, and gadgets to stop villains like the Joker and the Riddler. With the help of Alfred and Commissioner Gordon, he keeps the city safe. Though he has no superpowers, his courage and determination make him a true hero.`.split(" ");
 const contentLength = content.length;
-const gameTime = 30*1000;
+const gameTime = 3*1000;
 window.timer = null;
 
 // document.getElementById("content").innerHTML = content;
@@ -50,11 +50,30 @@ function getWpm() {
     return correctWords.length / gameTime * 60000;
 }
 
+function getAccuracy() {
+    const letters = [...document.querySelectorAll('.letter')];
+    const correctLetters = letters.filter(letter => letter.classList.contains('correct')).length;
+    const incorrectLetters = letters.filter(letter => letter.classList.contains('incorrect')).length;
+    const totalTyped = correctLetters + incorrectLetters;
+    return totalTyped === 0 ? 0 : (correctLetters / totalTyped) * 100;
+}
+
 function gameOver() {
     clearInterval(window.timer);
     addClass(document.getElementById('game'), 'over');
-    const result = getWpm();
-    document.getElementById('timer').innerHTML = `WPM: ${result}`;
+    const wpm = getWpm().toFixed(2);
+    const accuracy = getAccuracy().toFixed(2);
+
+    const results = {
+        wpm,
+        accuracy,
+        timestamp: new Date().toISOString()
+    };
+
+    localStorage.setItem('typingResults', JSON.stringify(results));
+
+    // Redirect to results page
+    window.location.href = '/results'; // or /results if using Next.js
 }
 
 

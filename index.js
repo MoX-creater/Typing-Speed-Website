@@ -15,6 +15,10 @@ app.get("/",(req,res)=>{
     res.render("index.ejs");
 });
 
+app.get("/results", (req, res) => {
+    res.render("result.ejs");
+});
+
 app.listen(port,()=>{
     console.log(`Server is running on port ${port}`);
 })
