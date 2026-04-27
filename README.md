@@ -1,4 +1,4 @@
-<<<<<<< HEAD
+
 # TypePulse — Typing Speed Web App
 
 A full-stack typing test platform built with the **MERN stack** (MongoDB, Express, React, Node.js) featuring real-time WPM and accuracy computation, JWT authentication, global leaderboards, and a premium dark-themed UI.
@@ -123,9 +123,6 @@ npm run dev
 - Server-side request timing middleware flags any response exceeding 150ms
 - Validated under 50–100 concurrent sessions ensuring consistent data synchronization
 
-## 📄 License
 
-MIT
-=======
 clone it then install all the required packages from package.json and then host it (node index.js). 
->>>>>>> 034ac3031a6032d21304f0c9922b78f4605b75c2
+
