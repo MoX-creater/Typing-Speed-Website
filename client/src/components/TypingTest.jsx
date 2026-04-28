@@ -99,7 +99,7 @@ export default function TypingTest({ user }) {
     // Save to backend if logged in
     if (user && localStorage.getItem("token")) {
       import("../api.js").then(({ saveSession }) => {
-        saveSession(results).catch(() => {});
+        saveSession(results).catch(() => { });
       });
     }
   }, [user, duration, currentWordIdx]);
@@ -140,94 +140,85 @@ export default function TypingTest({ user }) {
       startTimer();
     }
 
-    setCurrentWordIdx((prevWordIdx) => {
-      setCurrentCharIdx((prevCharIdx) => {
-        setCharStatuses((prevStatuses) => {
-          setExtraChars((prevExtra) => {
-            const word = words[prevWordIdx];
-            if (!word) return prevExtra;
-            const wKey = prevWordIdx;
+    const currentWord = words[currentWordIdx] || "";
+    let nextWordIdx = currentWordIdx;
+    let nextCharIdx = currentCharIdx;
+    let nextStatuses = { ...charStatuses };
+    let nextExtras = { ...extraChars };
 
-            if (isLetter) {
-              if (prevCharIdx < word.length) {
-                const expected = word[prevCharIdx];
-                const status = key === expected ? "correct" : "incorrect";
-                if (status === "correct") statsRef.current.correct++;
-                else statsRef.current.incorrect++;
+    if (isLetter) {
+      if (currentCharIdx < currentWord.length) {
+        const expected = currentWord[currentCharIdx];
+        const status = key === expected ? "correct" : "incorrect";
+        if (status === "correct") statsRef.current.correct++;
+        else statsRef.current.incorrect++;
+        nextStatuses[`${currentWordIdx}-${currentCharIdx}`] = status;
+      } else {
+        const extras = nextExtras[currentWordIdx] || [];
+        nextExtras[currentWordIdx] = [...extras, key];
+        statsRef.current.incorrect++;
+      }
+      nextCharIdx += 1;
+    }
 
-                const newStatuses = { ...prevStatuses, [`${wKey}-${prevCharIdx}`]: status };
-                setCharStatuses(newStatuses);
-              } else {
-                const extras = prevExtra[wKey] || [];
-                const newExtra = { ...prevExtra, [wKey]: [...extras, key] };
-                statsRef.current.incorrect++;
-                setExtraChars(newExtra);
-              }
-              setCurrentCharIdx(prevCharIdx + 1);
-              return prevExtra;
-            }
+    if (isSpace) {
+      if (currentCharIdx === 0 && !currentWord.length) {
+        // Do not advance if there is no word to skip.
+        nextWordIdx = currentWordIdx;
+      } else {
+        for (let i = currentCharIdx; i < currentWord.length; i++) {
+          if (!nextStatuses[`${currentWordIdx}-${i}`]) {
+            nextStatuses[`${currentWordIdx}-${i}`] = "incorrect";
+            statsRef.current.incorrect++;
+          }
+        }
 
-            if (isSpace && prevCharIdx > 0) {
-              // Mark remaining letters as incorrect
-              const newStatuses = { ...prevStatuses };
-              for (let i = prevCharIdx; i < word.length; i++) {
-                if (!newStatuses[`${wKey}-${i}`]) {
-                  newStatuses[`${wKey}-${i}`] = "incorrect";
-                  statsRef.current.incorrect++;
-                }
-              }
-              // Check if word was fully correct
-              let wordCorrect = true;
-              for (let i = 0; i < word.length; i++) {
-                if (newStatuses[`${wKey}-${i}`] !== "correct") { wordCorrect = false; break; }
-              }
-              if (wordCorrect && !(prevExtra[wKey]?.length)) {
-                statsRef.current.correctWordCount++;
-                setCorrectWords(statsRef.current.correctWordCount);
-              }
-              setCharStatuses(newStatuses);
-              setCurrentWordIdx(prevWordIdx + 1);
-              setCurrentCharIdx(0);
-              return prevExtra;
-            }
+        let wordCorrect = currentWord.length > 0;
+        for (let i = 0; i < currentWord.length; i++) {
+          if (nextStatuses[`${currentWordIdx}-${i}`] !== "correct") {
+            wordCorrect = false;
+            break;
+          }
+        }
+        if (wordCorrect && !(nextExtras[currentWordIdx]?.length)) {
+          statsRef.current.correctWordCount++;
+          setCorrectWords(statsRef.current.correctWordCount);
+        }
 
-            if (isBackspace) {
-              const extras = prevExtra[wKey] || [];
-              if (extras.length > 0) {
-                const newExtra = { ...prevExtra, [wKey]: extras.slice(0, -1) };
-                setExtraChars(newExtra);
-                setCurrentCharIdx(prevCharIdx - 1);
-              } else if (prevCharIdx > 0) {
-                const newStatuses = { ...prevStatuses };
-                const wasCorrect = newStatuses[`${wKey}-${prevCharIdx - 1}`] === "correct";
-                if (wasCorrect) statsRef.current.correct = Math.max(0, statsRef.current.correct - 1);
-                else statsRef.current.incorrect = Math.max(0, statsRef.current.incorrect - 1);
-                delete newStatuses[`${wKey}-${prevCharIdx - 1}`];
-                setCharStatuses(newStatuses);
-                setCurrentCharIdx(prevCharIdx - 1);
-              } else if (prevWordIdx > 0) {
-                setCurrentWordIdx(prevWordIdx - 1);
-                const prevWord = words[prevWordIdx - 1];
-                const prevExtras = prevExtra[prevWordIdx - 1] || [];
-                setCurrentCharIdx(prevWord.length + prevExtras.length);
-              }
-              return prevExtra;
-            }
+        nextWordIdx += 1;
+        nextCharIdx = 0;
+      }
+    }
 
-            return prevExtra;
-          });
-          return prevStatuses;
-        });
-        return prevCharIdx;
-      });
-      return prevWordIdx;
-    });
+    if (isBackspace) {
+      const extras = nextExtras[currentWordIdx] || [];
+      if (extras.length > 0) {
+        nextExtras[currentWordIdx] = extras.slice(0, -1);
+        nextCharIdx -= 1;
+      } else if (currentCharIdx > 0) {
+        const charKey = `${currentWordIdx}-${currentCharIdx - 1}`;
+        const wasCorrect = nextStatuses[charKey] === "correct";
+        if (wasCorrect) statsRef.current.correct = Math.max(0, statsRef.current.correct - 1);
+        else statsRef.current.incorrect = Math.max(0, statsRef.current.incorrect - 1);
+        delete nextStatuses[charKey];
+        nextCharIdx -= 1;
+      } else if (currentWordIdx > 0) {
+        nextWordIdx -= 1;
+        const previousWord = words[currentWordIdx - 1] || "";
+        const previousExtras = nextExtras[currentWordIdx - 1] || [];
+        nextCharIdx = previousWord.length + previousExtras.length;
+      }
+    }
 
-    // Live accuracy
+    setCharStatuses(nextStatuses);
+    setExtraChars(nextExtras);
+    setCurrentWordIdx(nextWordIdx);
+    setCurrentCharIdx(nextCharIdx);
+
     const { correct, incorrect } = statsRef.current;
     const total = correct + incorrect;
     if (total > 0) setAccuracy(((correct / total) * 100).toFixed(1));
-  }, [gameState, words, startTimer, initGame]);
+  }, [gameState, words, currentWordIdx, currentCharIdx, charStatuses, extraChars, startTimer, initGame]);
 
   const timerClass = timeLeft <= 5 ? "danger" : timeLeft <= 10 ? "warning" : "";
 
@@ -236,42 +227,32 @@ export default function TypingTest({ user }) {
   const visibleEnd = Math.min(words.length, currentWordIdx + 60);
 
   return (
-    <div className="page">
-      <div className="container">
-        <div className="typing-header">
-          <h1>Type. Faster.</h1>
-          <p>Test your typing speed and accuracy</p>
-        </div>
-
-        <div className="duration-selector">
-          {[15, 30, 60, 120].map((d) => (
-            <button key={d} className={`duration-btn ${duration === d ? "active" : ""}`}
-              onClick={() => { setDuration(d); }}>
-              {d}s
-            </button>
-          ))}
-        </div>
-
-        <div className="stats-bar">
-          <div className="stat-item">
-            <div className="stat-value">{gameState === "idle" ? "—" : wpm}</div>
-            <div className="stat-label">WPM</div>
+    <div className="page typing-page">
+      <div className="typing-container">
+        <div className="top-stats-row">
+          <div className="top-stat-group left-group">
+            <div>
+              <div className="top-stat-label">TIME LEFT</div>
+              <div className="top-stat-value timer-val">
+                {timeLeft < 10 ? `00:0${timeLeft}` : `00:${timeLeft}`}
+              </div>
+            </div>
           </div>
-          <div className="stat-item">
-            <div className="stat-value">{gameState === "idle" ? "—" : `${accuracy}%`}</div>
-            <div className="stat-label">Accuracy</div>
-          </div>
-          <div className="stat-item">
-            <div className="stat-value">{gameState === "idle" ? "—" : correctWords}</div>
-            <div className="stat-label">Words</div>
+          <div className="top-stat-group right-group">
+            <div className="stat-box" style={{ textAlign: "right" }}>
+              <div className="top-stat-label">WPM</div>
+              <div className="top-stat-value">{gameState === "idle" ? "000" : wpm}</div>
+            </div>
+            <div className="stat-box" style={{ textAlign: "right" }}>
+              <div className="top-stat-label">ACCURACY</div>
+              <div className="top-stat-value">{gameState === "idle" ? "100%" : `${accuracy}%`}</div>
+            </div>
           </div>
         </div>
-
-        <div className={`timer-display ${timerClass}`}>{timeLeft}</div>
 
         <div
           ref={areaRef}
-          className={`typing-area glass-card ${!isFocused && gameState !== "finished" ? "blurred" : ""}`}
+          className={`raw-typing-area ${!isFocused && gameState !== "finished" ? "blurred" : ""}`}
           tabIndex={0}
           onKeyDown={handleKeyDown}
           onFocus={() => setIsFocused(true)}
@@ -280,13 +261,14 @@ export default function TypingTest({ user }) {
           {words.slice(visibleStart, visibleEnd).map((word, wi) => {
             const actualIdx = visibleStart + wi;
             const isCurrent = actualIdx === currentWordIdx;
+            const isPast = actualIdx < currentWordIdx;
             return (
-              <span key={actualIdx} className={`word ${isCurrent ? "current" : ""}`}>
+              <span key={actualIdx} className={`word ${isCurrent ? "current" : ""} ${isPast ? "past" : ""}`}>
                 {word.split("").map((char, ci) => {
                   const status = charStatuses[`${actualIdx}-${ci}`] || "";
                   const isCursorHere = isCurrent && ci === currentCharIdx;
                   return (
-                    <span key={ci} className={`letter ${status} ${isCursorHere ? "current" : ""}`}>
+                    <span key={ci} className={`letter ${status} ${isCursorHere ? "cursor-active" : ""}`}>
                       {char}
                     </span>
                   );
@@ -295,30 +277,28 @@ export default function TypingTest({ user }) {
                   <span key={`e-${ei}`} className="letter incorrect extra">{ch}</span>
                 ))}
                 {isCurrent && currentCharIdx >= word.length && !(extraChars[actualIdx]?.length) && (
-                  <span className="letter current">&nbsp;</span>
+                  <span className="letter cursor-active">&nbsp;</span>
                 )}
               </span>
             );
           })}
         </div>
 
-        <div className="typing-controls">
-          <button className="btn btn-secondary" onClick={initGame}>
-            ↻ Restart
-          </button>
-          {gameState === "finished" && (
-            <button className="btn btn-primary" onClick={() => window.location.href = "/results"}>
-              View Results →
-            </button>
-          )}
+        <div className="typing-footer-hint">
+          <span className="key-hint">TAB</span> + <span className="key-hint">ENTER</span> TO RESTART TEST
         </div>
-
-        {gameState === "idle" && (
-          <p style={{ textAlign: "center", marginTop: 20, color: "var(--text-muted)", fontSize: "0.85rem" }}>
-            Start typing to begin · Press <kbd style={{ padding: "2px 8px", background: "var(--bg-glass)", borderRadius: 4, border: "1px solid var(--border-glass)" }}>Tab</kbd> to restart
-          </p>
-        )}
       </div>
+
+      <div className="waves-bg"></div>
+
+      <footer className="app-footer">
+        <div className="footer-left">© 2024 LUMINOUS VELOCITY</div>
+        <div className="footer-right">
+          <a href="#">KEYBOARD SHORTCUTS</a>
+          <a href="#">PRIVACY</a>
+          <a href="#">CONTACT</a>
+        </div>
+      </footer>
     </div>
   );
 }
