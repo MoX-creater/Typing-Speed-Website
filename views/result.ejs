@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Typing Speed Results</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        body {
+            background-color: #181818;
+            color: #f1f1f1;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 700px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 300;
+            letter-spacing: 2px;
+            color: #f1f1f1;
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            color: #f1f1f1;
+            font-weight: 400;
+            letter-spacing: 1px;
+        }
+
+        .results-container {
+            background-color: #242424;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(65, 56, 68, 0.1);
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .metrics {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 2.5rem;
+        }
+
+        .metric {
+            text-align: center;
+        }
+
+        .metric-value {
+            font-size: 3rem;
+            font-weight: 300;
+            color: #f1f1f1;
+            line-height: 1;
+            margin-bottom: 0.5rem;
+        }
+
+        .metric-label {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #9b9b9b;
+        }
+
+        .stats-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #333;
+        }
+
+        .stat-label {
+            color: #9b9b9b;
+        }
+
+        .stat-value {
+            font-weight: 500;
+        }
+
+        .actions {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border-radius: 4px;
+            font-weight: 400;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            font-size: 0.9rem;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-primary {
+            background-color: #f1f1f1;
+            color: #181818;
+            border: none;
+        }
+
+        .btn-primary:hover {
+            background-color: #9b9b9b;
+        }
+
+        .btn-secondary {
+            background-color: transparent;
+            color: #f1f1f1;
+            border: 1px solid #9b9b9b;
+        }
+
+        .btn-secondary:hover {
+            background-color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">TypePulse</div>
+            <h1>Your Results</h1>
+        </header>
+
+        <section class="results-container">
+            <div class="metrics">
+                <div class="metric">
+                    <div id="wpm" class="metric-value">0</div>
+                    <div class="metric-label">WPM</div>
+                </div>
+
+                <div class="metric">
+                    <div id="accuracy" class="metric-value">0%</div>
+                    <div class="metric-label">Accuracy</div>
+                </div>
+            </div>
+
+            <div class="actions">
+                <a href="/" class="btn btn-primary">Try Again</a>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        window.addEventListener('DOMContentLoaded', () => {
+            const data = JSON.parse(localStorage.getItem('typingResults'));
+
+            if (data) {
+                document.getElementById('wpm').textContent = `${data.wpm} WPM`;
+                document.getElementById('accuracy').textContent = `${data.accuracy}% Accuracy`;
+            } else {
+                document.getElementById('results-container').textContent = "No results found.";
+            }
+        });
+    </script>
+</body>
+</html>
