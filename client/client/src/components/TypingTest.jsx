@@ -40,10 +40,6 @@ export default function TypingTest({ user }) {
   const timerRef = useRef(null);
   const startTimeRef = useRef(null);
   const statsRef = useRef({ correct: 0, incorrect: 0, correctWordCount: 0 });
-  const wordsWrapperRef = useRef(null);
-  const cursorRef = useRef(null);
-  const marginRef = useRef(0);
-  const lastTopRef = useRef(0);
 
   const generateWords = useCallback(() => {
     let allWords = [];
@@ -69,9 +65,6 @@ export default function TypingTest({ user }) {
     setGameState("idle");
     statsRef.current = { correct: 0, incorrect: 0, correctWordCount: 0 };
     startTimeRef.current = null;
-    marginRef.current = 0;
-    lastTopRef.current = 0;
-    if (wordsWrapperRef.current) wordsWrapperRef.current.style.transform = 'translateY(0px)';
     setTimeout(() => areaRef.current?.focus(), 50);
   }, [duration, generateWords]);
 
@@ -229,37 +222,9 @@ export default function TypingTest({ user }) {
 
   const timerClass = timeLeft <= 5 ? "danger" : timeLeft <= 10 ? "warning" : "";
 
-  useEffect(() => {
-    if (!areaRef.current || !cursorRef.current || !wordsWrapperRef.current) return;
-    const activeLetter = wordsWrapperRef.current.querySelector('.cursor-active');
-    if (activeLetter) {
-      const top = activeLetter.offsetTop;
-      const left = activeLetter.offsetLeft;
-      
-      cursorRef.current.style.top = `${top}px`;
-      cursorRef.current.style.left = `${left}px`;
-
-      if (top > lastTopRef.current + 20) {
-        // Moved down a line
-        const visualTop = top + marginRef.current;
-        if (visualTop > 120) { // e.g. 3rd line
-          const diff = top - lastTopRef.current;
-          marginRef.current -= diff;
-          wordsWrapperRef.current.style.transform = `translateY(${marginRef.current}px)`;
-        }
-        lastTopRef.current = top;
-      } else if (top < lastTopRef.current - 20) {
-        // Moved up a line (backspace)
-        const visualTop = top + marginRef.current;
-        if (visualTop < 0) {
-          const diff = lastTopRef.current - top;
-          marginRef.current += diff;
-          wordsWrapperRef.current.style.transform = `translateY(${marginRef.current}px)`;
-        }
-        lastTopRef.current = top;
-      }
-    }
-  }, [currentWordIdx, currentCharIdx, words]);
+  // Determine visible word range for performance
+  const visibleStart = Math.max(0, currentWordIdx - 10);
+  const visibleEnd = Math.min(words.length, currentWordIdx + 60);
 
   return (
     <div className="page typing-page">
@@ -293,32 +258,30 @@ export default function TypingTest({ user }) {
           onFocus={() => setIsFocused(true)}
           onBlur={() => setIsFocused(false)}
         >
-          <div className="words-wrapper" ref={wordsWrapperRef}>
-            <div id="cursor" ref={cursorRef}></div>
-            {words.map((word, actualIdx) => {
-              const isCurrent = actualIdx === currentWordIdx;
-              const isPast = actualIdx < currentWordIdx;
-              return (
-                <span key={actualIdx} className={`word ${isCurrent ? "current" : ""} ${isPast ? "past" : ""}`}>
-                  {word.split("").map((char, ci) => {
-                    const status = charStatuses[`${actualIdx}-${ci}`] || "";
-                    const isCursorHere = isCurrent && ci === currentCharIdx;
-                    return (
-                      <span key={ci} className={`letter ${status} ${isCursorHere ? "cursor-active" : ""}`}>
-                        {char}
-                      </span>
-                    );
-                  })}
-                  {(extraChars[actualIdx] || []).map((ch, ei) => (
-                    <span key={`e-${ei}`} className="letter incorrect extra">{ch}</span>
-                  ))}
-                  {isCurrent && currentCharIdx >= word.length + (extraChars[actualIdx]?.length || 0) && (
-                    <span className="letter cursor-active">&#8203;</span>
-                  )}
-                </span>
-              );
-            })}
-          </div>
+          {words.slice(visibleStart, visibleEnd).map((word, wi) => {
+            const actualIdx = visibleStart + wi;
+            const isCurrent = actualIdx === currentWordIdx;
+            const isPast = actualIdx < currentWordIdx;
+            return (
+              <span key={actualIdx} className={`word ${isCurrent ? "current" : ""} ${isPast ? "past" : ""}`}>
+                {word.split("").map((char, ci) => {
+                  const status = charStatuses[`${actualIdx}-${ci}`] || "";
+                  const isCursorHere = isCurrent && ci === currentCharIdx;
+                  return (
+                    <span key={ci} className={`letter ${status} ${isCursorHere ? "cursor-active" : ""}`}>
+                      {char}
+                    </span>
+                  );
+                })}
+                {(extraChars[actualIdx] || []).map((ch, ei) => (
+                  <span key={`e-${ei}`} className="letter incorrect extra">{ch}</span>
+                ))}
+                {isCurrent && currentCharIdx >= word.length && !(extraChars[actualIdx]?.length) && (
+                  <span className="letter cursor-active">&nbsp;</span>
+                )}
+              </span>
+            );
+          })}
         </div>
 
         <div className="typing-footer-hint">

@@ -305,6 +305,7 @@ button {
   max-width: 1000px;
   padding: 0 40px;
   z-index: 10;
+  margin-top: -120px;
 }
 
 .top-stats-row {
@@ -347,25 +348,6 @@ button {
   cursor: text;
   outline: none;
   user-select: none;
-  overflow: hidden;
-  height: 145px;
-}
-
-.words-wrapper {
-  position: relative;
-  transition: transform 0.25s ease;
-}
-
-#cursor {
-  position: absolute;
-  width: 3px;
-  height: 1.3em;
-  background: var(--text-active);
-  animation: cursorBlink 1s step-end infinite;
-  transition: top 0.1s ease, left 0.1s ease;
-  z-index: 10;
-  border-radius: 2px;
-  margin-top: 0.15em;
 }
 
 .raw-typing-area.blurred {
@@ -417,7 +399,18 @@ button {
 }
 
 .letter.cursor-active {
-  /* Just a marker class now, no ::before pseudo-element */
+  position: relative;
+}
+
+.letter.cursor-active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 10%;
+  bottom: 10%;
+  width: 2px;
+  background: var(--text-active);
+  animation: cursorBlink 1s step-end infinite;
 }
 
 @keyframes cursorBlink {

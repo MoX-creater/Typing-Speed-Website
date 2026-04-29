@@ -1,4 +1,5 @@
 {
+<<<<<<< HEAD
   "name": "typepulse-client",
   "private": true,
   "version": "1.0.0",
@@ -17,5 +18,24 @@
   "devDependencies": {
     "@vitejs/plugin-react": "^4.5.2",
     "vite": "^6.3.0"
+=======
+  "name": "typing-speed-website-master",
+  "version": "1.0.0",
+  "description": "A full-stack typing test platform built with the **MERN stack** (MongoDB, Express, React, Node.js) featuring real-time WPM and accuracy computation, JWT authentication, global leaderboards, and a premium dark-themed UI.",
+  "homepage": "https://github.com/MoX-creater/Typing-Speed-Website#readme",
+  "bugs": {
+    "url": "https://github.com/MoX-creater/Typing-Speed-Website/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MoX-creater/Typing-Speed-Website.git"
+  },
+  "license": "ISC",
+  "author": "",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+>>>>>>> dfa4f62 (footer updated)
   }
 }

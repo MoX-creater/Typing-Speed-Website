@@ -7,7 +7,7 @@ export default function Navbar({ user, onLogout }) {
   return (
     <nav className="navbar">
       <div className="navbar-inner">
-        <Link to="/" className="navbar-logo">TYPE SPEED</Link>
+        <Link to="/" className="navbar-logo">LUMINOUS VELOCITY</Link>
         <div className="navbar-links center-links">
           <Link to="/" className={isActive("/")}>Test</Link>
           <Link to="/leaderboard" className={isActive("/leaderboard")}>Leaderboard</Link>
