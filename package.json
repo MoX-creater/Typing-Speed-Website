@@ -1,27 +1,9 @@
 {
-<<<<<<< HEAD
-  "name": "typepulse-client",
+  "name": "typing-speed-website-master",
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview"
-  },
-  "dependencies": {
-    "axios": "^1.15.2",
-    "react": "^19.1.0",
-    "react-dom": "^19.1.0",
-    "react-router-dom": "^7.14.2"
-  },
-  "devDependencies": {
-    "@vitejs/plugin-react": "^4.5.2",
-    "vite": "^6.3.0"
-=======
-  "name": "typing-speed-website-master",
-  "version": "1.0.0",
-  "description": "A full-stack typing test platform built with the **MERN stack** (MongoDB, Express, React, Node.js) featuring real-time WPM and accuracy computation, JWT authentication, global leaderboards, and a premium dark-themed UI.",
+  "description": "A full-stack typing test platform built with the MERN stack (MongoDB, Express, React, Node.js) featuring real-time WPM and accuracy computation, JWT authentication, global leaderboards, and a premium dark-themed UI.",
   "homepage": "https://github.com/MoX-creater/Typing-Speed-Website#readme",
   "bugs": {
     "url": "https://github.com/MoX-creater/Typing-Speed-Website/issues"
@@ -32,10 +14,21 @@
   },
   "license": "ISC",
   "author": "",
-  "type": "commonjs",
   "main": "index.js",
   "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
     "test": "echo \"Error: no test specified\" && exit 1"
->>>>>>> dfa4f62 (footer updated)
+  },
+  "dependencies": {
+    "axios": "^1.15.2",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "react-router-dom": "^7.14.2"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.5.2",
+    "vite": "^6.3.0"
   }
 }
