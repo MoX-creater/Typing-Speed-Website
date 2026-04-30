@@ -1,15 +1,46 @@
 import { useState, useEffect } from "react";
-import { getLeaderboard } from "../api";
+import { collection, query, orderBy, limit, getDocs } from "firebase/firestore";
+import { db } from "../../lib/firebase";
 
 export default function Leaderboard() {
   const [leaders, setLeaders] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    getLeaderboard()
-      .then(({ data }) => setLeaders(data))
-      .catch(() => {})
-      .finally(() => setLoading(false));
+    const fetchLeaderboard = async () => {
+      try {
+        const q = query(
+          collection(db, "sessions"),
+          orderBy("wpm", "desc"),
+          limit(100)
+        );
+        
+        const querySnapshot = await getDocs(q);
+        const uniqueUsers = new Map();
+        
+        querySnapshot.forEach((doc) => {
+          const data = doc.data();
+          const uid = data.userId;
+          // Since we ordered by WPM desc, the first time we see a user, it's their highest WPM
+          if (!uniqueUsers.has(uid)) {
+            uniqueUsers.set(uid, {
+              username: data.username || "Anonymous",
+              bestWpm: data.wpm,
+              bestAccuracy: data.accuracy
+            });
+          }
+        });
+        
+        const topLeaders = Array.from(uniqueUsers.values()).slice(0, 10);
+        setLeaders(topLeaders);
+      } catch (error) {
+        console.error("Error fetching leaderboard from Firestore", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchLeaderboard();
   }, []);
 
   return (

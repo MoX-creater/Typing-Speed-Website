@@ -1,4 +1,6 @@
 import { useRef, useState, useCallback, useEffect } from "react";
+import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { db } from "../../lib/firebase";
 
 const QUOTES = [
   "The quick brown fox jumps over the lazy dog near the riverbank where wildflowers bloom in the golden light of a summer afternoon",
@@ -104,6 +106,19 @@ export default function TypingTest({ user }) {
     localStorage.setItem("typingResults", JSON.stringify(results));
 
     // Save to backend if logged in
+    const currentUserId = user?.uid || user?._id || user?.id;
+    if (currentUserId) {
+      addDoc(collection(db, "sessions"), {
+        userId: currentUserId,
+        username: user?.displayName || user?.username || user?.email || "Anonymous",
+        wpm: Number(finalWpm),
+        accuracy: Number(acc),
+        duration,
+        createdAt: serverTimestamp()
+      }).catch(console.error);
+    }
+    
+    // Legacy API fallback
     if (user && localStorage.getItem("token")) {
       import("../api.js").then(({ saveSession }) => {
         saveSession(results).catch(() => { });

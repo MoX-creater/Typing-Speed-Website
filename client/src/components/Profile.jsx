@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { getProfile } from "../api";
+import { collection, query, where, getDocs } from "firebase/firestore";
+import { db } from "../../lib/firebase";
 
 export default function Profile({ user }) {
   const [profile, setProfile] = useState(null);
@@ -9,10 +10,62 @@ export default function Profile({ user }) {
 
   useEffect(() => {
     if (!user) { navigate("/login"); return; }
-    getProfile()
-      .then(({ data }) => setProfile(data))
-      .catch(() => {})
-      .finally(() => setLoading(false));
+    
+    const fetchProfile = async () => {
+      try {
+        const currentUserId = user?.uid || user?._id || user?.id;
+        const q = query(
+          collection(db, "sessions"),
+          where("userId", "==", currentUserId)
+        );
+        
+        const querySnapshot = await getDocs(q);
+        const sessions = [];
+        querySnapshot.forEach((doc) => {
+          sessions.push({ 
+            _id: doc.id, 
+            ...doc.data(), 
+            createdAt: doc.data().createdAt?.toDate() || new Date() 
+          });
+        });
+        
+        sessions.sort((a, b) => b.createdAt - a.createdAt);
+        
+        let totalSessions = sessions.length;
+        let bestWpm = 0;
+        let totalWpm = 0;
+        let bestAccuracy = 0;
+        let totalAccuracy = 0;
+        let totalTimeSpent = 0;
+        
+        sessions.forEach(s => {
+          if (s.wpm > bestWpm) bestWpm = s.wpm;
+          if (s.accuracy > bestAccuracy) bestAccuracy = s.accuracy;
+          totalWpm += s.wpm;
+          totalAccuracy += s.accuracy;
+          totalTimeSpent += (s.duration || 30);
+        });
+        
+        setProfile({
+          user: { createdAt: user.metadata?.creationTime || user.createdAt || new Date() },
+          stats: { 
+            totalSessions, 
+            bestWpm, 
+            avgWpm: totalSessions > 0 ? totalWpm / totalSessions : 0, 
+            avgAccuracy: totalSessions > 0 ? totalAccuracy / totalSessions : 0, 
+            bestAccuracy, 
+            totalTimeSpent 
+          },
+          recentSessions: sessions.slice(0, 15)
+        });
+      } catch (error) {
+        console.error("Error fetching profile from Firestore", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProfile();
   }, [user, navigate]);
 
   if (loading) return <div className="page"><div className="container" style={{ textAlign: "center", color: "var(--text-secondary)" }}>Loading profile...</div></div>;
@@ -24,9 +77,9 @@ export default function Profile({ user }) {
     <div className="page">
       <div className="container">
         <div className="profile-header">
-          <div className="profile-avatar">{user.username[0].toUpperCase()}</div>
+          <div className="profile-avatar">{(user.displayName || user.username || "T")[0].toUpperCase()}</div>
           <div className="profile-info">
-            <h2>{user.username}</h2>
+            <h2>{user.displayName || user.username || "Typist"}</h2>
             <p>{user.email} · Joined {new Date(profile.user.createdAt).toLocaleDateString()}</p>
           </div>
         </div>

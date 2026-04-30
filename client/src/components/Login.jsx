@@ -16,8 +16,8 @@ export default function Login({ onLogin }) {
 
       if (!user) return;
 
-      // mimic your existing login flow
-      onLogin(user, null); // no token needed for Firebase
+    
+      onLogin(user, null); 
       navigate("/");
 
     } catch (err) {
