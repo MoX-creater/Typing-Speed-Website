@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { login } from "../api";
+import { signInWithGoogle } from "../../lib/auth";
 
 export default function Login({ onLogin }) {
   const [email, setEmail] = useState("");
@@ -9,10 +10,25 @@ export default function Login({ onLogin }) {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
+  const handleGoogleLogin = async () => {
+    try {
+      const user = await signInWithGoogle();
+
+      if (!user) return;
+
+      // mimic your existing login flow
+      onLogin(user, null); // no token needed for Firebase
+      navigate("/");
+
+    } catch (err) {
+      setError("Google login failed");
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError("");
     setLoading(true);
+    setError("");
     try {
       const { data } = await login({ email, password });
       onLogin(data.user, data.token);
@@ -35,6 +51,15 @@ export default function Login({ onLogin }) {
           <input className="input-field" type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} required />
           <button className="btn btn-primary" type="submit" disabled={loading}>
             {loading ? "Signing in..." : "Sign In"}
+          </button>
+          <div style={{ margin: "10px 0", textAlign: "center" }}>OR</div>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={handleGoogleLogin}
+            disabled={loading}
+          >
+            Sign in with Google
           </button>
         </form>
         <p className="auth-switch">
