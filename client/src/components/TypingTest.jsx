@@ -25,9 +25,9 @@ function getRandomQuote() {
 }
 
 export default function TypingTest({ user }) {
-  const [duration, setDuration] = useState(15);
+  const [duration, setDuration] = useState(30);
   const [gameState, setGameState] = useState("idle"); // idle | running | finished
-  const [timeLeft, setTimeLeft] = useState(15);
+  const [timeLeft, setTimeLeft] = useState(30);
   const [words, setWords] = useState([]);
   const [currentWordIdx, setCurrentWordIdx] = useState(0);
   const [currentCharIdx, setCurrentCharIdx] = useState(0);
@@ -117,7 +117,7 @@ export default function TypingTest({ user }) {
         createdAt: serverTimestamp()
       }).catch(console.error);
     }
-
+    
     // Legacy API fallback
     if (user && localStorage.getItem("token")) {
       import("../api.js").then(({ saveSession }) => {
@@ -250,7 +250,7 @@ export default function TypingTest({ user }) {
     if (activeLetter) {
       const top = activeLetter.offsetTop;
       const left = activeLetter.offsetLeft;
-
+      
       cursorRef.current.style.top = `${top}px`;
       cursorRef.current.style.left = `${left}px`;
 

@@ -1,7 +1,20 @@
 {
   "name": "typing-speed-website-master",
+  "private": true,
   "version": "1.0.0",
-  "description": "MERN Stack Typing Speed App",
+  "type": "module",
+  "description": "A full-stack typing test platform built with the MERN stack (MongoDB, Express, React, Node.js) featuring real-time WPM and accuracy computation, JWT authentication, global leaderboards, and a premium dark-themed UI.",
+  "homepage": "https://github.com/MoX-creater/Typing-Speed-Website#readme",
+  "bugs": {
+    "url": "https://github.com/MoX-creater/Typing-Speed-Website/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MoX-creater/Typing-Speed-Website.git"
+  },
+  "license": "ISC",
+  "author": "",
+  "main": "index.js",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
@@ -16,6 +29,7 @@
     "react-router-dom": "^7.14.2"
   },
   "devDependencies": {
-    "concurrently": "^8.2.2"
+    "@vitejs/plugin-react": "^4.5.2",
+    "vite": "^6.3.0"
   }
 }
