@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { collection, query, orderBy, limit, getDocs } from "firebase/firestore";
 import { db } from "../../lib/firebase";
 
@@ -24,6 +25,7 @@ export default function Leaderboard() {
           // Since we ordered by WPM desc, the first time we see a user, it's their highest WPM
           if (!uniqueUsers.has(uid)) {
             uniqueUsers.set(uid, {
+              uid,
               username: data.username || "Anonymous",
               bestWpm: data.wpm,
               bestAccuracy: data.accuracy
@@ -61,7 +63,7 @@ export default function Leaderboard() {
             {leaders.map((entry, i) => (
               <div key={i} className="leaderboard-row" style={{ animationDelay: `${i * 50}ms`, animation: "slideUp 0.4s ease forwards" }}>
                 <div className="leaderboard-rank">#{i + 1}</div>
-                <div className="leaderboard-username">{entry.username}</div>
+                <Link to={`/profile/${entry.uid}`} className="leaderboard-username">{entry.username}</Link>
                 <div className="leaderboard-wpm">{entry.bestWpm.toFixed(1)} WPM</div>
                 <div className="leaderboard-accuracy">{entry.bestAccuracy.toFixed(1)}%</div>
               </div>

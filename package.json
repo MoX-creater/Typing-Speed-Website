@@ -3,11 +3,11 @@
   "version": "1.0.0",
   "description": "MERN Stack Typing Speed App",
   "scripts": {
-    "start": "node server/index.js",
-    "server": "cd server && npm run dev",
+    "start": "cd client && npm run dev",
+    "server": "echo \"No server backend configured\"",
     "client": "cd client && npm run dev",
-    "dev": "concurrently \"npm run server\" \"npm run client\"",
-    "install-all": "npm install && cd server && npm install && cd ../client && npm install"
+    "dev": "cd client && npm run dev",
+    "install-all": "npm install && cd client && npm install"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"

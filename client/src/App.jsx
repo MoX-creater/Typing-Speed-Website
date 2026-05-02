@@ -1,5 +1,7 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { useState, useEffect } from "react";
+import { doc, setDoc } from "firebase/firestore";
+import { db } from "../lib/firebase";
 import Navbar from "./components/Navbar";
 import TypingTest from "./components/TypingTest";
 import Results from "./components/Results";
@@ -19,10 +21,22 @@ function App() {
     }
   }, []);
 
-  const handleLogin = (userData, token) => {
+  const handleLogin = async (userData, token) => {
     localStorage.setItem("token", token);
     localStorage.setItem("user", JSON.stringify(userData));
     setUser(userData);
+    
+    // Add user to Firestore
+    try {
+      await setDoc(doc(db, "users", userData.uid || userData._id), {
+        uid: userData.uid || userData._id,
+        displayName: userData.displayName || userData.username,
+        email: userData.email,
+        createdAt: new Date()
+      }, { merge: true });
+    } catch (error) {
+      console.error("Error adding user to Firestore", error);
+    }
   };
 
   const handleLogout = () => {
@@ -41,6 +55,7 @@ function App() {
         <Route path="/login" element={<Login onLogin={handleLogin} />} />
         <Route path="/register" element={<Register onLogin={handleLogin} />} />
         <Route path="/profile" element={<Profile user={user} />} />
+        <Route path="/profile/:userId" element={<Profile user={user} />} />
       </Routes>
     </BrowserRouter>
   );

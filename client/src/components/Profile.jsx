@@ -1,22 +1,25 @@
 import { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { collection, query, where, getDocs } from "firebase/firestore";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import { collection, query, where, getDocs, doc, getDoc } from "firebase/firestore";
 import { db } from "../../lib/firebase";
+import { useFriends } from "../hooks/useFriends";
 
 export default function Profile({ user }) {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const { userId } = useParams();
+  const { friendRequests, isFriend, friendRequestSent, sendFriendRequest, acceptFriendRequest, declineFriendRequest } = useFriends(userId, user);
 
   useEffect(() => {
     if (!user) { navigate("/login"); return; }
     
     const fetchProfile = async () => {
       try {
-        const currentUserId = user?.uid || user?._id || user?.id;
+        const profileUserId = userId || user.uid;
         const q = query(
           collection(db, "sessions"),
-          where("userId", "==", currentUserId)
+          where("userId", "==", profileUserId)
         );
         
         const querySnapshot = await getDocs(q);
@@ -46,8 +49,12 @@ export default function Profile({ user }) {
           totalTimeSpent += (s.duration || 30);
         });
         
+        // Fetch user info from users collection
+        const userDoc = await getDoc(doc(db, "users", profileUserId));
+        const userData = userDoc.exists() ? userDoc.data() : { displayName: "Anonymous", email: "", createdAt: new Date() };
+        
         setProfile({
-          user: { createdAt: user.metadata?.creationTime || user.createdAt || new Date() },
+          user: userData,
           stats: { 
             totalSessions, 
             bestWpm, 
@@ -66,7 +73,7 @@ export default function Profile({ user }) {
     };
 
     fetchProfile();
-  }, [user, navigate]);
+  }, [user, navigate, userId]);
 
   if (loading) return <div className="page"><div className="container" style={{ textAlign: "center", color: "var(--text-secondary)" }}>Loading profile...</div></div>;
   if (!profile) return <div className="page"><div className="container" style={{ textAlign: "center" }}><p style={{ color: "var(--text-secondary)" }}>Could not load profile.</p><Link to="/" className="btn btn-primary" style={{ marginTop: 16, display: "inline-block" }}>Go Home</Link></div></div>;
@@ -77,10 +84,21 @@ export default function Profile({ user }) {
     <div className="page">
       <div className="container">
         <div className="profile-header">
-          <div className="profile-avatar">{(user.displayName || user.username || "T")[0].toUpperCase()}</div>
+          <div className="profile-avatar">{(profile.user.displayName || "T")[0].toUpperCase()}</div>
           <div className="profile-info">
-            <h2>{user.displayName || user.username || "Typist"}</h2>
-            <p>{user.email} · Joined {new Date(profile.user.createdAt).toLocaleDateString()}</p>
+            <h2>{profile.user.displayName || "Typist"}</h2>
+            <p>{profile.user.email} · Joined {new Date(profile.user.createdAt?.toDate ? profile.user.createdAt.toDate() : profile.user.createdAt).toLocaleDateString()}</p>
+            {userId && userId !== user.uid && (
+              <div style={{ marginTop: 8 }}>
+                {isFriend ? (
+                  <span style={{ color: "var(--success)" }}>Friends</span>
+                ) : friendRequestSent ? (
+                  <span style={{ color: "var(--text-secondary)" }}>Friend Request Sent</span>
+                ) : (
+                  <button className="btn btn-primary" onClick={sendFriendRequest}>Send Friend Request</button>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
@@ -92,6 +110,21 @@ export default function Profile({ user }) {
           <div className="glass-card profile-stat"><div className="stat-val">{(stats.bestAccuracy || 0).toFixed(1)}%</div><div className="stat-lbl">Best Accuracy</div></div>
           <div className="glass-card profile-stat"><div className="stat-val">{Math.round(stats.totalTimeSpent || 0)}s</div><div className="stat-lbl">Time Spent</div></div>
         </div>
+
+        {!userId && friendRequests.length > 0 && (
+          <div className="glass-card" style={{ marginBottom: 24 }}>
+            <h3>Friend Requests</h3>
+            {friendRequests.map(req => (
+              <div key={req.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                <Link to={`/profile/${req.from}`}>{req.fromUser.displayName}</Link>
+                <div>
+                  <button className="btn btn-success" onClick={() => acceptFriendRequest(req.id, req.from)}>Accept</button>
+                  <button className="btn btn-danger" onClick={() => declineFriendRequest(req.id)} style={{ marginLeft: 8 }}>Decline</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
 
         <h3 style={{ marginBottom: 16 }}>Recent Sessions</h3>
         {recentSessions.length === 0 ? (
