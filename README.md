@@ -1,5 +1,5 @@
 
-# TypePulse — Typing Speed Web App
+# Typing Speed Web App
 
 A full-stack typing test platform built with the **MERN stack** (MongoDB, Express, React, Node.js) featuring real-time WPM and accuracy computation, JWT authentication, global leaderboards, and a premium dark-themed UI.
 
@@ -14,7 +14,7 @@ A full-stack typing test platform built with the **MERN stack** (MongoDB, Expres
 - **Optimized Rendering** — `useRef` for mutable stats and windowed word rendering to minimize input lag during continuous typing
 - **Request Timing Middleware** — Server-side monitoring logs any API response exceeding 150ms
 
-## 🛠️ Tech Stack
+##  Tech Stack
 
 | Layer      | Technology                        |
 |------------|-----------------------------------|
