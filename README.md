@@ -3,7 +3,7 @@
 
 A full-stack typing test platform built with the **MERN stack** (MongoDB, Express, React, Node.js) featuring real-time WPM and accuracy computation, JWT authentication, global leaderboards, and a premium dark-themed UI.
 
-## ✨ Features
+##  Features
 
 - **Real-Time Metrics** — Live WPM, accuracy, and word count updated during typing with sub-150ms response latency
 - **Multiple Durations** — Choose from 15s, 30s, 60s, or 120s test sessions
@@ -24,7 +24,7 @@ A full-stack typing test platform built with the **MERN stack** (MongoDB, Expres
 | Auth       | JWT (jsonwebtoken), bcryptjs      |
 | Styling    | Vanilla CSS (glassmorphism, JetBrains Mono) |
 
-## 📁 Project Structure
+##  Project Structure
 
 ```
 ├── server/
@@ -56,7 +56,7 @@ A full-stack typing test platform built with the **MERN stack** (MongoDB, Expres
 │           └── Leaderboard.jsx
 ```
 
-## 🚀 Getting Started
+##  Getting Started
 
 ### Prerequisites
 
@@ -104,7 +104,7 @@ npm run dev
 - **Frontend:** http://localhost:5173
 - **Backend:** http://localhost:5000
 
-## 📡 API Reference
+##  API Reference
 
 | Method | Endpoint                  | Auth | Description                       |
 |--------|---------------------------|------|-----------------------------------|
@@ -116,13 +116,11 @@ npm run dev
 | GET    | `/api/sessions/history`   | Yes  | Paginated user session history    |
 | GET    | `/api/health`             | No   | Server health check               |
 
-## ⚡ Performance
+##  Performance
 
 - Optimized React state management using `useRef` for high-frequency keystroke tracking to avoid unnecessary re-renders
 - Windowed rendering — only ~70 words near the cursor are rendered from 200+ total, minimizing DOM nodes
 - Server-side request timing middleware flags any response exceeding 150ms
 - Validated under 50–100 concurrent sessions ensuring consistent data synchronization
 
-
-clone it then install all the required packages from package.json and then host it (node index.js). 
 
