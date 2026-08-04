@@ -1,26 +1,27 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
 :root {
-  --bg-primary: #0a0a0a;
-  --bg-secondary: #12121a;
-  --bg-card: rgba(20, 20, 32, 0.8);
-  --bg-glass: rgba(255, 255, 255, 0.03);
+  --bg-primary: #0d1117;
+  --bg-secondary: #161b22;
+  --bg-card: rgba(22, 27, 34, 0.8);
+  --bg-glass: rgba(255, 255, 255, 0.05);
   --border-glass: rgba(255, 255, 255, 0.06);
-  --text-primary: #a0a0b0;
-  --text-secondary: #777788;
-  --text-muted: #3a3a4a;
-  --text-active: #00e5ff;
-  --accent: #00e5ff;
-  --accent-glow: rgba(0, 229, 255, 0.3);
-  --accent-secondary: #00e5ff;
+  --text-primary: #f3f4f6;
+  --text-secondary: #9ca3af;
+  --text-muted: #6b7280;
+  --text-active: #22d3ee;
+  --accent: #22d3ee;
+  --accent-muted: rgba(34, 211, 238, 0.4);
+  --accent-glow: rgba(34, 211, 238, 0.25);
+  --accent-secondary: #22d3ee;
   --success: #22c55e;
   --success-glow: rgba(34, 197, 94, 0.25);
-  --error: #ff5555;
-  --error-glow: rgba(255, 85, 85, 0.2);
+  --error: #f87171;
+  --error-glow: rgba(248, 113, 113, 0.2);
   --warning: #feca57;
-  --danger: #ff5555;
-  --gradient-primary: linear-gradient(135deg, #00e5ff, #00bfff);
-  --gradient-dark: linear-gradient(180deg, #0a0a0a 0%, #12121a 100%);
+  --danger: #f87171;
+  --gradient-primary: linear-gradient(135deg, #22d3ee, #0ea5e9);
+  --gradient-dark: linear-gradient(180deg, #0d1117 0%, #161b22 100%);
   --font-sans: 'Inter', -apple-system, system-ui, sans-serif;
   --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
   --radius-sm: 8px;
@@ -275,14 +276,30 @@ button {
   font-size: 0.95rem;
   font-weight: 500;
   padding: 8px 0;
-  border-bottom: 2px solid transparent;
   transition: all var(--transition);
+  position: relative;
+}
+
+.navbar-links.center-links a::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 20'%3E%3Cpath fill='none' stroke='%2322d3ee' stroke-width='4' d='M0,10 Q100,20 200,10 T400,10'/%3E%3C/svg%3E") center/cover no-repeat;
+  opacity: 0;
+  transition: opacity var(--transition);
 }
 
 .navbar-links.center-links a:hover,
 .navbar-links.center-links a.active {
   color: var(--text-active);
-  border-bottom-color: var(--text-active);
+}
+
+.navbar-links.center-links a:hover::after,
+.navbar-links.center-links a.active::after {
+  opacity: 1;
 }
 
 .navbar-actions {
@@ -341,7 +358,7 @@ button {
 
 .top-stat-label {
   font-size: 0.75rem;
-  color: var(--text-secondary);
+  color: var(--accent-muted);
   letter-spacing: 1px;
   margin-bottom: 8px;
 }
@@ -377,14 +394,19 @@ button {
 
 #cursor {
   position: absolute;
-  width: 3px;
+  top: 0;
+  left: 0;
+  width: 2px;
   height: 1.3em;
   background: var(--text-active);
-  animation: cursorBlink 1s step-end infinite;
-  transition: top 0.1s ease, left 0.1s ease;
+  transition: transform 0.1s ease-out;
   z-index: 10;
   border-radius: 2px;
   margin-top: 0.15em;
+}
+
+#cursor.blink {
+  animation: cursorBlink 1s step-start infinite;
 }
 
 .raw-typing-area.blurred {
@@ -428,6 +450,9 @@ button {
 
 .letter.incorrect {
   color: var(--error);
+  text-decoration: underline;
+  text-decoration-color: var(--error);
+  text-underline-offset: 4px;
 }
 
 .letter.extra {
@@ -446,10 +471,14 @@ button {
 
 .typing-footer-hint {
   text-align: center;
-  margin-top: 80px;
+  margin: 80px auto 0;
   font-size: 0.75rem;
   color: var(--text-muted);
   letter-spacing: 1px;
+  background: var(--bg-card);
+  padding: 10px 20px;
+  border-radius: 9999px;
+  width: max-content;
 }
 
 .key-hint {
@@ -495,7 +524,7 @@ button {
   left: 0;
   right: 0;
   height: 300px;
-  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 320'%3E%3Cpath fill='%230e0e14' fill-opacity='1' d='M0,192L48,197.3C96,203,192,213,288,192C384,171,480,117,576,106.7C672,96,768,128,864,154.7C960,181,1056,203,1152,192C1248,181,1344,139,1392,117.3L1440,96L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z'%3E%3C/path%3E%3C/svg%3E") bottom/cover no-repeat;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 320'%3E%3Cpath fill='%23161b22' fill-opacity='1' d='M0,192L48,197.3C96,203,192,213,288,192C384,171,480,117,576,106.7C672,96,768,128,864,154.7C960,181,1056,203,1152,192C1248,181,1344,139,1392,117.3L1440,96L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z'%3E%3C/path%3E%3C/svg%3E") bottom/cover no-repeat;
   z-index: 0;
 }
 

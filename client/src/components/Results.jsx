@@ -1,70 +1,56 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
-export default function Results({ user }) {
-  const [data, setData] = useState(null);
+export default function Results() {
+  const [results, setResults] = useState(null);
 
   useEffect(() => {
-    const stored = localStorage.getItem("typingResults");
-    if (stored) {
-      try { setData(JSON.parse(stored)); } catch { /* ignore */ }
+    const saved = localStorage.getItem("typingResults");
+    if (saved) {
+      try {
+        setResults(JSON.parse(saved));
+      } catch (e) {
+        // ignore
+      }
     }
   }, []);
 
-  if (!data) {
+  if (!results) {
     return (
-      <div className="page">
-        <div className="container results-page">
-          <h1>No Results Found</h1>
-          <p style={{ color: "var(--text-secondary)", marginBottom: 24 }}>Take a typing test first to see your results.</p>
-          <Link to="/" className="btn btn-primary">Start Typing</Link>
+      <div className="page results-page">
+        <div className="glass-card results-card" style={{ textAlign: "center" }}>
+          <h2>No Results Found</h2>
+          <Link to="/" className="btn btn-primary">Take a Test</Link>
         </div>
       </div>
     );
   }
 
-  const rating = data.wpm >= 80 ? "Lightning Fast ⚡" : data.wpm >= 60 ? "Impressive 🔥" : data.wpm >= 40 ? "Good Job 👍" : "Keep Practicing 💪";
-
   return (
-    <div className="page">
-      <div className="container results-page">
-        <h1>{rating}</h1>
-
+    <div className="page results-page">
+      <div className="glass-card results-card">
+        <h2>Test Results</h2>
         <div className="results-grid">
-          <div className="glass-card result-card highlight">
-            <div className="result-value">{data.wpm}</div>
-            <div className="result-label">Words Per Minute</div>
+          <div className="result-stat">
+            <span className="result-label">WPM</span>
+            <span className="result-value">{results.wpm}</span>
           </div>
-          <div className="glass-card result-card">
-            <div className="result-value" style={{ color: parseFloat(data.accuracy) >= 95 ? "var(--success)" : parseFloat(data.accuracy) >= 80 ? "var(--warning)" : "var(--error)" }}>
-              {data.accuracy}%
-            </div>
-            <div className="result-label">Accuracy</div>
+          <div className="result-stat">
+            <span className="result-label">Accuracy</span>
+            <span className="result-value">{results.accuracy}%</span>
           </div>
-          <div className="glass-card result-card">
-            <div className="result-value">{data.correctWords || "—"}</div>
-            <div className="result-label">Correct Words</div>
+          <div className="result-stat">
+            <span className="result-label">Time</span>
+            <span className="result-value">{results.duration}s</span>
           </div>
-          <div className="glass-card result-card">
-            <div className="result-value">{data.duration || 30}s</div>
-            <div className="result-label">Duration</div>
+          <div className="result-stat">
+            <span className="result-label">Characters</span>
+            <span className="result-value">{results.correctChars}/{results.totalChars}</span>
           </div>
         </div>
-
-        {data.correctChars > 0 && (
-          <div className="glass-card" style={{ padding: 24, marginBottom: 24 }}>
-            <div style={{ display: "flex", justifyContent: "space-around", color: "var(--text-secondary)", fontSize: "0.9rem" }}>
-              <span>Correct chars: <strong style={{ color: "var(--success)" }}>{data.correctChars}</strong></span>
-              <span>Total chars: <strong style={{ color: "var(--text-primary)" }}>{data.totalChars}</strong></span>
-              <span>Errors: <strong style={{ color: "var(--error)" }}>{data.totalChars - data.correctChars}</strong></span>
-            </div>
-          </div>
-        )}
-
-        <div className="results-actions">
-          <Link to="/" className="btn btn-primary">Try Again</Link>
+        <div className="results-actions" style={{ display: 'flex', gap: '1rem', marginTop: '2rem' }}>
+          <Link to="/" className="btn btn-primary">Test Again</Link>
           <Link to="/leaderboard" className="btn btn-secondary">Leaderboard</Link>
-          {!user && <Link to="/register" className="btn btn-secondary">Sign Up to Save</Link>}
         </div>
       </div>
     </div>

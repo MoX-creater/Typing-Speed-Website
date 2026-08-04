@@ -25,9 +25,9 @@ function getRandomQuote() {
 }
 
 export default function TypingTest({ user }) {
-  const [duration, setDuration] = useState(30);
+  const [duration, setDuration] = useState(15);
   const [gameState, setGameState] = useState("idle"); // idle | running | finished
-  const [timeLeft, setTimeLeft] = useState(30);
+  const [timeLeft, setTimeLeft] = useState(15);
   const [words, setWords] = useState([]);
   const [currentWordIdx, setCurrentWordIdx] = useState(0);
   const [currentCharIdx, setCurrentCharIdx] = useState(0);
@@ -251,8 +251,11 @@ export default function TypingTest({ user }) {
       const top = activeLetter.offsetTop;
       const left = activeLetter.offsetLeft;
       
-      cursorRef.current.style.top = `${top}px`;
-      cursorRef.current.style.left = `${left}px`;
+      cursorRef.current.style.transform = `translate(${left}px, ${top}px)`;
+      
+      cursorRef.current.classList.remove('blink');
+      void cursorRef.current.offsetWidth;
+      cursorRef.current.classList.add('blink');
 
       if (top > lastTopRef.current + 20) {
         // Moved down a line
@@ -309,7 +312,7 @@ export default function TypingTest({ user }) {
           onBlur={() => setIsFocused(false)}
         >
           <div className="words-wrapper" ref={wordsWrapperRef}>
-            <div id="cursor" ref={cursorRef}></div>
+            <div id="cursor" ref={cursorRef} className="blink"></div>
             {words.map((word, actualIdx) => {
               const isCurrent = actualIdx === currentWordIdx;
               const isPast = actualIdx < currentWordIdx;
