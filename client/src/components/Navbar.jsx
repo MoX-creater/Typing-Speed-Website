@@ -11,6 +11,7 @@ export default function Navbar({ user, onLogout }) {
         <div className="navbar-links center-links">
           <Link to="/" className={isActive("/")}>Test</Link>
           <Link to="/leaderboard" className={isActive("/leaderboard")}>Leaderboard</Link>
+          <Link to="/multiplayer" className={isActive("/multiplayer")}>Multiplayer</Link>
           <Link to="/about" className={isActive("/about")}>About</Link>
         </div>
         <div className="navbar-actions">
