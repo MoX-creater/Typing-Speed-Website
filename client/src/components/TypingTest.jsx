@@ -1,4 +1,5 @@
 import { useRef, useState, useCallback, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "../../lib/firebase";
 
@@ -38,7 +39,12 @@ export default function TypingTest({ user }) {
   const [correctWords, setCorrectWords] = useState(0);
   const [isFocused, setIsFocused] = useState(false);
 
+  const navigate = useNavigate();
   const areaRef = useRef(null);
+  const samplesRef = useRef([]);
+  const lastSampleSecondRef = useRef(-1);
+  const mode = "Classic";
+  const language = "English";
   const timerRef = useRef(null);
   const startTimeRef = useRef(null);
   const statsRef = useRef({ correct: 0, incorrect: 0, correctWordCount: 0 });
@@ -71,6 +77,8 @@ export default function TypingTest({ user }) {
     setGameState("idle");
     statsRef.current = { correct: 0, incorrect: 0, correctWordCount: 0 };
     startTimeRef.current = null;
+    samplesRef.current = [];
+    lastSampleSecondRef.current = -1;
     marginRef.current = 0;
     lastTopRef.current = 0;
     if (wordsWrapperRef.current) wordsWrapperRef.current.style.transform = 'translateY(0px)';
@@ -89,23 +97,49 @@ export default function TypingTest({ user }) {
     const { correct, incorrect, correctWordCount } = statsRef.current;
     const total = correct + incorrect;
     const acc = total > 0 ? ((correct / total) * 100).toFixed(1) : 0;
-    const elapsed = (Date.now() - startTimeRef.current) / 60000;
-    const finalWpm = elapsed > 0 ? (correctWordCount / elapsed).toFixed(1) : 0;
+    const elapsedMs = Math.max(Date.now() - startTimeRef.current, 0);
+    const elapsedMinutes = elapsedMs / 60000;
+    const finalWpm = elapsedMinutes > 0 ? (correctWordCount / elapsedMinutes).toFixed(1) : 0;
+    const finalRawWpm = elapsedMinutes > 0 ? (((correct + incorrect) / 5) / elapsedMinutes).toFixed(1) : 0;
+    const extraCharsCount = Object.values(extraChars).reduce((sum, extras) => sum + extras.length, 0);
+    const currentWord = words[currentWordIdx] || "";
+    const missedChars = Math.max(0, currentWord.length - currentCharIdx);
+
     setWpm(finalWpm);
     setAccuracy(acc);
     setCorrectWords(correctWordCount);
 
-    // Save to localStorage for results page
+    if (Math.floor(elapsedMs / 1000) > lastSampleSecondRef.current) {
+      const sampleSecond = Math.min(duration, Math.floor(elapsedMs / 1000));
+      samplesRef.current.push({
+        second: sampleSecond,
+        wpm: Number(finalWpm),
+        rawWpm: Number(finalRawWpm),
+        errors: incorrect,
+      });
+      lastSampleSecondRef.current = sampleSecond;
+    }
+
     const results = {
-      wpm: finalWpm, accuracy: acc, duration,
+      wpm: finalWpm,
+      accuracy: acc,
+      duration,
       correctWords: correctWordCount,
       totalWords: currentWordIdx,
-      correctChars: correct, totalChars: total,
+      correctChars: correct,
+      incorrectChars: Math.max(0, incorrect - extraCharsCount),
+      extraChars: extraCharsCount,
+      missedChars,
+      rawWpm: finalRawWpm,
+      testType: `${mode} • ${duration}s • ${language}`,
+      mode,
+      language,
       timestamp: new Date().toISOString(),
+      samples: samplesRef.current,
+      chars: `${correct}/${Math.max(0, incorrect - extraCharsCount)}/${extraCharsCount}/${missedChars}`,
     };
     localStorage.setItem("typingResults", JSON.stringify(results));
 
-    // Save to backend if logged in
     const currentUserId = user?.uid || user?._id || user?.id;
     if (currentUserId) {
       addDoc(collection(db, "sessions"), {
@@ -114,34 +148,47 @@ export default function TypingTest({ user }) {
         wpm: Number(finalWpm),
         accuracy: Number(acc),
         duration,
-        createdAt: serverTimestamp()
+        createdAt: serverTimestamp(),
       }).catch(console.error);
     }
-    
-    // Legacy API fallback
+
     if (user && localStorage.getItem("token")) {
       import("../api.js").then(({ saveSession }) => {
-        saveSession(results).catch(() => { });
+        saveSession(results).catch(console.error);
       });
     }
-  }, [user, duration, currentWordIdx]);
+
+    navigate("/results");
+  }, [user, duration, currentWordIdx, currentCharIdx, extraChars, words, navigate]);
 
   const startTimer = useCallback(() => {
     startTimeRef.current = Date.now();
+    samplesRef.current = [];
+    lastSampleSecondRef.current = -1;
     setGameState("running");
     timerRef.current = setInterval(() => {
-      const elapsed = Math.floor((Date.now() - startTimeRef.current) / 1000);
+      const elapsedMs = Date.now() - startTimeRef.current;
+      const elapsed = Math.floor(elapsedMs / 1000);
       const left = duration - elapsed;
+      const sampleSecond = Math.min(elapsed, duration);
+
+      if (sampleSecond > lastSampleSecondRef.current) {
+        const mins = elapsedMs / 60000;
+        const actualWpm = mins > 0 ? Number((statsRef.current.correctWordCount / mins).toFixed(1)) : 0;
+        const rawChars = statsRef.current.correct + statsRef.current.incorrect;
+        const rawWpm = mins > 0 ? Number(((rawChars / 5) / mins).toFixed(1)) : 0;
+        samplesRef.current.push({ second: sampleSecond, wpm: actualWpm, rawWpm, errors: statsRef.current.incorrect });
+        lastSampleSecondRef.current = sampleSecond;
+        if (mins > 0) {
+          setWpm(actualWpm.toFixed(1));
+        }
+      }
+
       if (left <= 0) {
         setTimeLeft(0);
         endGame();
       } else {
         setTimeLeft(left);
-        // Live WPM
-        const mins = elapsed / 60;
-        if (mins > 0) {
-          setWpm((statsRef.current.correctWordCount / mins).toFixed(1));
-        }
       }
     }, 200);
   }, [duration, endGame]);
