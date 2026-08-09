@@ -30,6 +30,23 @@ function calculateConsistency(samples = []) {
   return Math.max(0, Math.min(100, 100 - cov * 100)).toFixed(1);
 }
 
+function CustomTooltip(props) {
+  const { active, payload, label } = props || {};
+  if (!active || !payload || !payload.length) return null;
+
+  // The hovered data point is in payload[0].payload
+  const point = payload[0].payload || {};
+  // Use a key tied to the data point to avoid React reusing stale nodes
+  return (
+    <div className="recharts-default-tooltip" style={{ padding: 8 }} key={point.second || label}>
+      <div style={{ color: '#fff', fontWeight: 600 }}>{`Time: ${point.second}s`}</div>
+      <div style={{ color: '#fff' }}>{`WPM: ${point.wpm ?? '-'} `}</div>
+      <div style={{ color: '#fff' }}>{`Smoothed: ${point.smoothedWpm ?? '-'} `}</div>
+      <div style={{ color: errorColor }}>{`Errors: ${point.errors ?? 0}`}</div>
+    </div>
+  );
+}
+
 export default function Results({ user }) {
   const [results, setResults] = useState(null);
 
@@ -81,7 +98,7 @@ export default function Results({ user }) {
                 <XAxis dataKey="second" tick={{ fill: grayText, fontSize: 12 }} axisLine={false} tickLine={false} label={{ value: "Time (s)", position: "insideBottom", dy: 14, fill: grayText, fontSize: 12 }} />
                 <YAxis yAxisId="left" domain={[0, "dataMax + 10"]} tick={{ fill: grayText, fontSize: 12 }} axisLine={false} tickLine={false} label={{ value: "WPM", angle: -90, position: "insideLeft", fill: grayText, fontSize: 12 }} />
                 <YAxis yAxisId="right" orientation="right" domain={[0, "dataMax + 2"]} tick={{ fill: errorColor, fontSize: 12 }} axisLine={false} tickLine={false} label={{ value: "Errors", angle: 90, position: "insideRight", fill: errorColor, fontSize: 12 }} />
-                <Tooltip contentStyle={{ background: "rgba(15, 23, 42, 0.96)", border: "1px solid rgba(255,255,255,0.08)", color: "#fff" }} labelStyle={{ color: "#fff" }} />
+                <Tooltip content={<CustomTooltip />} contentStyle={{ background: "rgba(15, 23, 42, 0.96)", border: "1px solid rgba(255,255,255,0.08)", color: "#fff" }} labelStyle={{ color: "#fff" }} />
                 <Line type="monotone" dataKey="rawWpm" yAxisId="left" stroke="rgba(255,255,255,0.35)" strokeWidth={1} dot={false} activeDot={false} />
                 <Line type="monotone" dataKey="wpm" yAxisId="left" stroke={accent} strokeWidth={3} dot={false} activeDot={false} />
                 <Line type="monotone" dataKey="smoothedWpm" yAxisId="left" stroke={accent} strokeWidth={2} strokeDasharray="6 6" dot={false} activeDot={false} />

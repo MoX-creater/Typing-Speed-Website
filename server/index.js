@@ -1,11 +1,14 @@
+require('dotenv').config();
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const cors = require('cors');
 const { setupSocket } = require('./socketHandlers');
+const firebaseAdmin = require('./firebaseAdmin');
 
 const app = express();
-app.use(cors());
+const clientUrl = process.env.CLIENT_URL || process.env.FRONTEND_URL || "http://localhost:5173";
+app.use(cors({ origin: clientUrl, methods: ["GET", "POST"] }));
 
 // Create the HTTP server using Express
 const server = http.createServer(app);
@@ -13,7 +16,7 @@ const server = http.createServer(app);
 // Configure Socket.io with CORS to allow the frontend origin
 const io = new Server(server, {
   cors: {
-    origin: process.env.FRONTEND_URL || "http://localhost:5173",
+    origin: clientUrl,
     methods: ["GET", "POST"]
   }
 });
@@ -43,4 +46,5 @@ server.on('error', (error) => {
 
 server.listen(PORT, () => {
   console.log(`Server listening on port ${PORT}`);
+  console.log(`Allowed client origin: ${clientUrl}`);
 });

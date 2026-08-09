@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { io } from 'socket.io-client';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { db } from '../lib/firebase';
 
 const SERVER_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:5000';
 
@@ -41,10 +43,16 @@ export function useRoom(user) {
    * Array<{ place, socketId, username, finalWpm, finalAccuracy }>
    */
   const [raceResults, setRaceResults] = useState(null);
+  const raceResultSavedRef = useRef(false);
+  const userRef = useRef(user);
 
   const countdownRef = useRef(null);
 
   // ── Socket setup ──────────────────────────────────────────────────────────
+  useEffect(() => {
+    userRef.current = user;
+  }, [user]);
+
   useEffect(() => {
     const socket = io(SERVER_URL, { autoConnect: true });
     socketRef.current = socket;
@@ -87,8 +95,8 @@ export function useRoom(user) {
       setRacePassage(passage);
       setRaceResults(null);
       setPlayerProgress([]);
+      raceResultSavedRef.current = false;
 
-      // Tick every 200 ms to keep countdown tight
       const tick = () => {
         const msLeft = startTime - Date.now();
         if (msLeft <= 0) {
@@ -98,6 +106,7 @@ export function useRoom(user) {
         }
         setCountdown(Math.ceil(msLeft / 1000));
       };
+
       tick();
       countdownRef.current = setInterval(tick, 200);
     });
@@ -126,16 +135,41 @@ export function useRoom(user) {
     /**
      * race_over — all players finished; server sends the sorted leaderboard.
      */
-    socket.on('race_over', ({ results }) => {
+    socket.on('race_over', ({ roomId: endedRoomId, results }) => {
       setRaceResults(results);
       clearInterval(countdownRef.current);
+
+      if (raceResultSavedRef.current) return;
+      if (!Array.isArray(results)) return;
+
+      const currentUser = userRef.current;
+      if (!currentUser) return;
+
+      const currentUserId = currentUser?.uid || currentUser?._id || currentUser?.id;
+      if (!currentUserId) return;
+
+      const finalResult = results.find((r) => r.socketId === socketRef.current?.id);
+      if (!finalResult) return;
+
+      raceResultSavedRef.current = true;
+      addDoc(collection(db, 'sessions'), {
+        userId: currentUserId,
+        username: currentUser?.displayName || currentUser?.username || currentUser?.email || 'Anonymous',
+        mode: 'multiplayer',
+        roomId: endedRoomId,
+        rank: finalResult.place,
+        wpm: Number(finalResult.finalWpm),
+        accuracy: Number(finalResult.finalAccuracy),
+        duration: null,
+        createdAt: serverTimestamp(),
+      }).catch(console.error);
     });
 
     return () => {
       clearInterval(countdownRef.current);
       socket.disconnect();
     };
-  }, []);
+  }, [user]);
 
   // ── Helpers ───────────────────────────────────────────────────────────────
 
