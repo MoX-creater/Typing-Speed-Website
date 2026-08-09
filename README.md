@@ -1,54 +1,59 @@
-
 # Typing Speed Web App
 
-A full-stack typing test platform built with the **MERN stack** (MongoDB, Express, React, Node.js) featuring real-time WPM and accuracy computation, JWT authentication, global leaderboards, and a premium dark-themed UI.
+A full-stack typing test platform built with **React, Node.js/Express, Socket.io, and Firebase/Firestore**, featuring real-time WPM and accuracy computation, live multiplayer race mode, global leaderboards, and a premium dark-themed UI.
 
-##  Features
+**Live demo:** [typing-speed-website-lac.vercel.app](https://typing-speed-website-lac.vercel.app/)
 
-- **Real-Time Metrics** — Live WPM, accuracy, and word count updated during typing with sub-150ms response latency
+## Features
+
+- **Real-Time Metrics** — Live WPM, accuracy, and word count updated during typing with low-latency response
 - **Multiple Durations** — Choose from 15s, 30s, 60s, or 120s test sessions
-- **6 RESTful APIs** — User registration/login, session persistence, leaderboard, and profile analytics
-- **JWT Authentication** — Secure token-based auth with 7-day expiry
-- **Global Leaderboard** — Top 50 typists ranked by best WPM
-- **Profile Dashboard** — Aggregated stats (best/avg WPM, accuracy, total time) with session history
+- **Live Multiplayer Race Mode** — Create or join a room and race against other players in real time via Socket.io, with live progress tracking and synced countdown/start
+- **Firebase Authentication** — Secure user accounts via Firebase Auth
+- **Firestore Persistence** — Solo test results and multiplayer race results saved to Firestore, tagged by mode (`solo` / `multiplayer`) with room and rank data for races
+- **Global Leaderboard** — Top typists ranked by best WPM
+- **Profile Dashboard** — Aggregated stats and session history pulled from Firestore
+- **Post-Test Results Screen** — WPM-over-time graph (raw vs. smoothed), consistency score, character breakdown, and full session detail
 - **Optimized Rendering** — `useRef` for mutable stats and windowed word rendering to minimize input lag during continuous typing
-- **Request Timing Middleware** — Server-side monitoring logs any API response exceeding 150ms
 
-##  Tech Stack
+## Tech Stack
 
-| Layer      | Technology                        |
-|------------|-----------------------------------|
-| Frontend   | React 19, Vite, React Router, Axios |
-| Backend    | Node.js, Express                  |
-| Database   | MongoDB, Mongoose                 |
-| Auth       | JWT (jsonwebtoken), bcryptjs      |
-| Styling    | Vanilla CSS (glassmorphism, JetBrains Mono) |
+| Layer      | Technology                                  |
+|------------|----------------------------------------------|
+| Frontend   | React, Vite, React Router                     |
+| Backend    | Node.js, Express, Socket.io                   |
+| Database   | Firebase / Cloud Firestore                    |
+| Auth       | Firebase Authentication                       |
+| Styling    | Vanilla CSS (dark theme, JetBrains Mono)      |
+| Deployment | Backend: Render · Frontend: Vercel            |
 
-##  Project Structure
+## Project Structure
 
 ```
 ├── server/
-│   ├── index.js                # Express entry point, CORS, timing middleware
-│   ├── .env                    # MONGO_URI, JWT_SECRET
-│   ├── models/
-│   │   ├── User.js             # User schema
-│   │   └── Session.js          # Typing session schema
-│   ├── middleware/
-│   │   └── auth.js             # JWT verification middleware
-│   └── routes/
-│       ├── users.js            # Register, Login, Profile APIs
-│       └── sessions.js         # Save, Leaderboard, History APIs
+│   ├── index.js                # Express + Socket.io entry point, CORS
+│   ├── firebaseAdmin.js        # Firebase Admin SDK init (env-based credentials)
+│   ├── socketHandlers.js       # Multiplayer room, race lifecycle, socket events
+│   └── .env                    # PORT, CLIENT_URL, FIREBASE_* credentials
 ├── client/
 │   ├── index.html
 │   ├── vite.config.js
+│   ├── lib/
+│   │   ├── firebase.js         # Firebase client SDK init
+│   │   └── auth.js
 │   └── src/
 │       ├── main.jsx
 │       ├── App.jsx             # Router + auth state
-│       ├── api.js              # Axios service layer
+│       ├── api.js
 │       ├── index.css           # Design system
+│       ├── hooks/
+│       │   ├── useFriends.js
+│       │   └── useRoom.js
 │       └── components/
 │           ├── Navbar.jsx
-│           ├── TypingTest.jsx  # Core typing engine
+│           ├── TypingTest.jsx      # Core typing engine
+│           ├── MultiplayerLobby.jsx
+│           ├── MultiplayerRace.jsx
 │           ├── Results.jsx
 │           ├── Login.jsx
 │           ├── Register.jsx
@@ -56,12 +61,12 @@ A full-stack typing test platform built with the **MERN stack** (MongoDB, Expres
 │           └── Leaderboard.jsx
 ```
 
-##  Getting Started
+## Getting Started
 
 ### Prerequisites
 
 - **Node.js** v18+
-- **MongoDB** running locally or a [MongoDB Atlas](https://www.mongodb.com/atlas) URI
+- A **Firebase** project with Firestore and Authentication enabled
 
 ### Installation
 
@@ -81,20 +86,28 @@ npm install
 
 ### Configuration
 
-Create or edit `server/.env`:
+**Backend** — copy `server/.env.example` to `server/.env` and fill in your own values (Firebase Admin credentials, JWT secret, etc.):
 
-```env
-PORT=5000
-MONGO_URI=mongodb://localhost:27017/typing-speed-app
-JWT_SECRET=your_secret_key_here
+```bash
+cd server
+cp .env.example .env
 ```
+
+**Frontend** — copy `client/.env.example` to `client/.env` and fill in your Firebase client config and backend URL:
+
+```bash
+cd client
+cp .env.example .env
+```
+
+See each `.env.example` file for the full list of required variables — never commit your actual `.env` files.
 
 ### Run
 
 ```bash
 # Terminal 1 — Start backend
 cd server
-npm run dev
+npm start
 
 # Terminal 2 — Start frontend
 cd client
@@ -104,23 +117,21 @@ npm run dev
 - **Frontend:** http://localhost:5173
 - **Backend:** http://localhost:5000
 
-##  API Reference
+## Multiplayer Race Mode
 
-| Method | Endpoint                  | Auth | Description                       |
-|--------|---------------------------|------|-----------------------------------|
-| POST   | `/api/users/register`     | No   | Register a new user               |
-| POST   | `/api/users/login`        | No   | Authenticate and return JWT       |
-| GET    | `/api/users/profile`      | Yes  | User profile with aggregated stats|
-| POST   | `/api/sessions`           | Yes  | Save a typing session result      |
-| GET    | `/api/sessions/leaderboard`| No  | Global top 50 scores              |
-| GET    | `/api/sessions/history`   | Yes  | Paginated user session history    |
-| GET    | `/api/health`             | No   | Server health check               |
+- Create or join a room via a short room code
+- Server-synced countdown before the race starts
+- Live progress broadcast to all players in the room via Socket.io
+- Results saved to Firestore per player, tagged with `mode: "multiplayer"`, `roomId`, and final `rank`
 
-##  Performance
+## Deployment
+
+- **Backend** deployed on [Render](https://render.com) (Node/Express + Socket.io, persistent WebSocket support)
+- **Frontend** deployed on [Vercel](https://vercel.com)
+- **Database/Auth** hosted on Firebase (Firestore + Authentication)
+
+## Performance
 
 - Optimized React state management using `useRef` for high-frequency keystroke tracking to avoid unnecessary re-renders
-- Windowed rendering — only ~70 words near the cursor are rendered from 200+ total, minimizing DOM nodes
-- Server-side request timing middleware flags any response exceeding 150ms
-- Validated under 50–100 concurrent sessions ensuring consistent data synchronization
-
-
+- Windowed rendering — only the words near the cursor are rendered from the full passage, minimizing DOM nodes
+- Socket.io progress updates batched to avoid flooding connections during multiplayer races
