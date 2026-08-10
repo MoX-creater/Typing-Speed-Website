@@ -10,6 +10,7 @@ import Register from "./components/Register";
 import Profile from "./components/Profile";
 import Leaderboard from "./components/Leaderboard";
 import MultiplayerLobby from "./components/MultiplayerLobby";
+import About from "./components/About";
 
 function App() {
   const [user, setUser] = useState(null);
@@ -54,6 +55,7 @@ function App() {
         <Route path="/results" element={<Results user={user} />} />
         <Route path="/leaderboard" element={<Leaderboard />} />
         <Route path="/multiplayer" element={<MultiplayerLobby user={user} />} />
+        <Route path="/about" element={<About />} />
         <Route path="/login" element={<Login onLogin={handleLogin} />} />
         <Route path="/register" element={<Register onLogin={handleLogin} />} />
         <Route path="/profile" element={<Profile user={user} />} />

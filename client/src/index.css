@@ -983,6 +983,102 @@ button {
   }
 }
 
+.about-page h1 {
+  font-size: 2rem;
+  margin-bottom: 8px;
+}
+
+.about-page .subtitle {
+  color: var(--text-secondary);
+  margin-bottom: 32px;
+}
+
+.about-card {
+  padding: 32px;
+  display: grid;
+  gap: 28px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-glass);
+}
+
+.about-section h2 {
+  font-size: 1.2rem;
+  margin-bottom: 14px;
+  letter-spacing: 0.01em;
+}
+
+.about-section p,
+.about-section li {
+  color: var(--text-secondary);
+  line-height: 1.8;
+}
+
+.about-note {
+  display: grid;
+  gap: 14px;
+}
+
+.about-term {
+  color: var(--accent);
+  font-family: var(--font-mono);
+}
+
+.about-features {
+  display: grid;
+  gap: 12px;
+  list-style: none;
+  padding-left: 0;
+  margin: 0;
+}
+
+.about-features li {
+  position: relative;
+  padding-left: 28px;
+}
+
+.about-features li::before {
+  content: "▹";
+  position: absolute;
+  left: 0;
+  top: 0;
+  color: var(--accent);
+}
+
+.tech-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.tech-badges span {
+  display: inline-flex;
+  padding: 10px 14px;
+  border-radius: 999px;
+  background: rgba(34, 211, 238, 0.08);
+  color: var(--text-primary);
+  border: 1px solid rgba(34, 211, 238, 0.16);
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+}
+
+.about-section.credits p {
+  color: var(--text-secondary);
+}
+
+.about-section.credits a {
+  color: var(--accent);
+}
+
+@media (max-width: 768px) {
+  .about-card {
+    padding: 24px;
+  }
+
+  .about-page {
+    padding: 24px 0;
+  }
+}
+
 /* ═══════════════════════════════════════════════════════════════════════════
    Multiplayer Lobby
    ═══════════════════════════════════════════════════════════════════════════ */
