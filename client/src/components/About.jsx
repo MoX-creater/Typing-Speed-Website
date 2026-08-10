@@ -63,7 +63,7 @@ export default function About() {
 
           <section className="about-section credits">
             <p>
-              Built by <a href="#" target="_blank" rel="noreferrer">[your name]</a>, with a little bit of speed
+              Built by <a href="#" target="_blank" rel="noreferrer">[Mox-creater]</a>, with a little bit of speed
               and a lot of keyboard love.
             </p>
           </section>

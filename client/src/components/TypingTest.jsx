@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "../../lib/firebase";
 
+const DURATION_OPTIONS = [15, 30, 60, 120];
+
 const QUOTES = [
   "The quick brown fox jumps over the lazy dog near the riverbank where wildflowers bloom in the golden light of a summer afternoon",
   "Programming is the art of telling another human being what one wants the computer to do in a language both can understand clearly",
@@ -26,9 +28,12 @@ function getRandomQuote() {
 }
 
 export default function TypingTest({ user }) {
-  const [duration, setDuration] = useState(15);
+  const [duration, setDuration] = useState(() => {
+    const stored = localStorage.getItem("typingDuration");
+    return stored ? Number(stored) : 15;
+  });
   const [gameState, setGameState] = useState("idle"); // idle | running | finished
-  const [timeLeft, setTimeLeft] = useState(15);
+  const [timeLeft, setTimeLeft] = useState(duration);
   const [words, setWords] = useState([]);
   const [currentWordIdx, setCurrentWordIdx] = useState(0);
   const [currentCharIdx, setCurrentCharIdx] = useState(0);
@@ -53,18 +58,20 @@ export default function TypingTest({ user }) {
   const marginRef = useRef(0);
   const lastTopRef = useRef(0);
 
-  const generateWords = useCallback(() => {
+  const generateWords = useCallback((targetDuration = 15) => {
+    const targetCount = Math.max(200, Math.ceil(targetDuration * 2.5));
     let allWords = [];
-    while (allWords.length < 200) {
+    while (allWords.length < targetCount) {
       const q = getRandomQuote();
       allWords = allWords.concat(q.split(" "));
     }
-    return allWords.slice(0, 200);
+    return allWords.slice(0, targetCount);
   }, []);
 
-  const initGame = useCallback(() => {
+  const initGame = useCallback((overrideDuration = duration) => {
     clearInterval(timerRef.current);
-    const w = generateWords();
+    const activeDuration = overrideDuration;
+    const w = generateWords(activeDuration);
     setWords(w);
     setCurrentWordIdx(0);
     setCurrentCharIdx(0);
@@ -73,7 +80,7 @@ export default function TypingTest({ user }) {
     setWpm(0);
     setAccuracy(100);
     setCorrectWords(0);
-    setTimeLeft(duration);
+    setTimeLeft(activeDuration);
     setGameState("idle");
     statsRef.current = { correct: 0, incorrect: 0, correctWordCount: 0 };
     startTimeRef.current = null;
@@ -86,6 +93,12 @@ export default function TypingTest({ user }) {
   }, [duration, generateWords]);
 
   useEffect(() => { initGame(); }, [initGame]);
+
+  const handleDurationSelect = useCallback((newDuration) => {
+    localStorage.setItem("typingDuration", String(newDuration));
+    setDuration(newDuration);
+    initGame(newDuration);
+  }, [initGame]);
 
   useEffect(() => {
     setTimeLeft(duration);
@@ -329,6 +342,19 @@ export default function TypingTest({ user }) {
   return (
     <div className="page typing-page">
       <div className="typing-container">
+        <div className="duration-selector">
+          {DURATION_OPTIONS.map((option) => (
+            <button
+              key={option}
+              className={`duration-btn ${duration === option ? "active" : ""}`}
+              onClick={() => handleDurationSelect(option)}
+              type="button"
+            >
+              {option}
+            </button>
+          ))}
+        </div>
+
         <div className="top-stats-row">
           <div className="top-stat-group left-group">
             <div>
