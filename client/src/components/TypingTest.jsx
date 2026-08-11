@@ -2,8 +2,16 @@ import { useRef, useState, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "../../lib/firebase";
+import {
+  aggregateTypingTelemetry,
+  createEmptyCharClassStats,
+  recordCharAttempt,
+} from "../utils/typingTelemetry";
+import { generatePassage } from "../api";
+import { getAuthToken } from "../../lib/authToken";
 
 const DURATION_OPTIONS = [15, 30, 60, 120];
+const WPM_SAMPLE_INTERVAL = 5;
 
 const QUOTES = [
   "The quick brown fox jumps over the lazy dog near the riverbank where wildflowers bloom in the golden light of a summer afternoon",
@@ -27,7 +35,7 @@ function getRandomQuote() {
   return QUOTES[Math.floor(Math.random() * QUOTES.length)];
 }
 
-export default function TypingTest({ user }) {
+export default function TypingTest({ user, authReady = false }) {
   const [duration, setDuration] = useState(() => {
     const stored = localStorage.getItem("typingDuration");
     return stored ? Number(stored) : 15;
@@ -43,11 +51,19 @@ export default function TypingTest({ user }) {
   const [accuracy, setAccuracy] = useState(100);
   const [correctWords, setCorrectWords] = useState(0);
   const [isFocused, setIsFocused] = useState(false);
+  const [aiTheme, setAiTheme] = useState("");
+  const [aiDifficulty, setAiDifficulty] = useState("medium");
+  const [isGeneratingPassage, setIsGeneratingPassage] = useState(false);
+  const [passageError, setPassageError] = useState("");
 
   const navigate = useNavigate();
   const areaRef = useRef(null);
   const samplesRef = useRef([]);
   const lastSampleSecondRef = useRef(-1);
+  const mistypeEventsRef = useRef([]);
+  const charClassStatsRef = useRef(createEmptyCharClassStats());
+  const wpmIntervalSamplesRef = useRef([]);
+  const lastWpmIntervalSampleRef = useRef(-1);
   const mode = "Classic";
   const language = "English";
   const timerRef = useRef(null);
@@ -58,21 +74,28 @@ export default function TypingTest({ user }) {
   const marginRef = useRef(0);
   const lastTopRef = useRef(0);
 
-  const generateWords = useCallback((targetDuration = 15) => {
+  const buildWordList = useCallback((targetDuration, seedPassage = null) => {
     const targetCount = Math.max(200, Math.ceil(targetDuration * 2.5));
     let allWords = [];
-    while (allWords.length < targetCount) {
-      const q = getRandomQuote();
-      allWords = allWords.concat(q.split(" "));
+
+    if (seedPassage) {
+      const seedWords = seedPassage.trim().split(/\s+/).filter(Boolean);
+      while (allWords.length < targetCount) {
+        allWords = allWords.concat(seedWords);
+      }
+    } else {
+      while (allWords.length < targetCount) {
+        const q = getRandomQuote();
+        allWords = allWords.concat(q.split(" "));
+      }
     }
+
     return allWords.slice(0, targetCount);
   }, []);
 
-  const initGame = useCallback((overrideDuration = duration) => {
+  const resetGameWithWords = useCallback((wordList, activeDuration = duration) => {
     clearInterval(timerRef.current);
-    const activeDuration = overrideDuration;
-    const w = generateWords(activeDuration);
-    setWords(w);
+    setWords(wordList);
     setCurrentWordIdx(0);
     setCurrentCharIdx(0);
     setCharStatuses({});
@@ -86,11 +109,20 @@ export default function TypingTest({ user }) {
     startTimeRef.current = null;
     samplesRef.current = [];
     lastSampleSecondRef.current = -1;
+    mistypeEventsRef.current = [];
+    charClassStatsRef.current = createEmptyCharClassStats();
+    wpmIntervalSamplesRef.current = [];
+    lastWpmIntervalSampleRef.current = -1;
     marginRef.current = 0;
     lastTopRef.current = 0;
-    if (wordsWrapperRef.current) wordsWrapperRef.current.style.transform = 'translateY(0px)';
+    if (wordsWrapperRef.current) wordsWrapperRef.current.style.transform = "translateY(0px)";
     setTimeout(() => areaRef.current?.focus(), 50);
-  }, [duration, generateWords]);
+  }, [duration]);
+
+  const initGame = useCallback((overrideDuration = duration, seedPassage = null) => {
+    const activeDuration = overrideDuration;
+    resetGameWithWords(buildWordList(activeDuration, seedPassage), activeDuration);
+  }, [duration, buildWordList, resetGameWithWords]);
 
   useEffect(() => { initGame(); }, [initGame]);
 
@@ -99,6 +131,33 @@ export default function TypingTest({ user }) {
     setDuration(newDuration);
     initGame(newDuration);
   }, [initGame]);
+
+  const handleGenerateAiPassage = useCallback(async () => {
+    const currentUserId = user?.uid || user?._id || user?.id;
+    if (!currentUserId || gameState === "running" || isGeneratingPassage) return;
+
+    setIsGeneratingPassage(true);
+    setPassageError("");
+
+    try {
+      const token = await getAuthToken();
+      if (!token) {
+        setPassageError("Session expired. Please sign in again.");
+        return;
+      }
+
+      const { data } = await generatePassage({
+        difficulty: aiDifficulty,
+        theme: aiTheme.trim() || "everyday life",
+        duration,
+      });
+      initGame(duration, data.text);
+    } catch (err) {
+      setPassageError(err.response?.data?.error || "Failed to generate passage");
+    } finally {
+      setIsGeneratingPassage(false);
+    }
+  }, [user, gameState, isGeneratingPassage, aiDifficulty, aiTheme, duration, initGame]);
 
   useEffect(() => {
     setTimeLeft(duration);
@@ -133,6 +192,25 @@ export default function TypingTest({ user }) {
       lastSampleSecondRef.current = sampleSecond;
     }
 
+    if (
+      Math.floor(elapsedMs / 1000) > lastWpmIntervalSampleRef.current &&
+      Number(finalWpm) > 0
+    ) {
+      const intervalSecond = Math.min(duration, Math.floor(elapsedMs / 1000));
+      wpmIntervalSamplesRef.current.push({
+        second: intervalSecond,
+        wpm: Number(finalWpm),
+      });
+      lastWpmIntervalSampleRef.current = intervalSecond;
+    }
+
+    const telemetry = aggregateTypingTelemetry({
+      mistypeEvents: mistypeEventsRef.current,
+      wpmSamples: wpmIntervalSamplesRef.current,
+      charClassStats: charClassStatsRef.current,
+      passageText: words.join(" "),
+    });
+
     const results = {
       wpm: finalWpm,
       accuracy: acc,
@@ -150,6 +228,10 @@ export default function TypingTest({ user }) {
       timestamp: new Date().toISOString(),
       samples: samplesRef.current,
       chars: `${correct}/${Math.max(0, incorrect - extraCharsCount)}/${extraCharsCount}/${missedChars}`,
+      avgWpmOverTime: telemetry.avgWpmOverTime,
+      accuracyByCharClass: telemetry.accuracyByCharClass,
+      finalWpm: Number(finalWpm),
+      finalAccuracy: Number(acc),
     };
     localStorage.setItem("typingResults", JSON.stringify(results));
 
@@ -163,11 +245,9 @@ export default function TypingTest({ user }) {
         duration,
         createdAt: serverTimestamp(),
       }).catch(console.error);
-    }
 
-    if (user && localStorage.getItem("token")) {
-      import("../api.js").then(({ saveSession }) => {
-        saveSession(results).catch(console.error);
+      import("../api.js").then(({ saveTypingProfile }) => {
+        saveTypingProfile({ userId: currentUserId, ...telemetry }).catch(console.error);
       });
     }
 
@@ -178,6 +258,8 @@ export default function TypingTest({ user }) {
     startTimeRef.current = Date.now();
     samplesRef.current = [];
     lastSampleSecondRef.current = -1;
+    wpmIntervalSamplesRef.current = [];
+    lastWpmIntervalSampleRef.current = -1;
     setGameState("running");
     timerRef.current = setInterval(() => {
       const elapsedMs = Date.now() - startTimeRef.current;
@@ -192,6 +274,15 @@ export default function TypingTest({ user }) {
         const rawWpm = mins > 0 ? Number(((rawChars / 5) / mins).toFixed(1)) : 0;
         samplesRef.current.push({ second: sampleSecond, wpm: actualWpm, rawWpm, errors: statsRef.current.incorrect });
         lastSampleSecondRef.current = sampleSecond;
+        if (
+          (sampleSecond > 0 && sampleSecond % WPM_SAMPLE_INTERVAL === 0) ||
+          left <= 0
+        ) {
+          if (sampleSecond > lastWpmIntervalSampleRef.current) {
+            wpmIntervalSamplesRef.current.push({ second: sampleSecond, wpm: actualWpm });
+            lastWpmIntervalSampleRef.current = sampleSecond;
+          }
+        }
         if (mins > 0) {
           setWpm(actualWpm.toFixed(1));
         }
@@ -232,10 +323,32 @@ export default function TypingTest({ user }) {
       if (currentCharIdx < currentWord.length) {
         const expected = currentWord[currentCharIdx];
         const status = key === expected ? "correct" : "incorrect";
+        mistypeEventsRef.current = recordCharAttempt(
+          mistypeEventsRef.current,
+          charClassStatsRef.current,
+          {
+            expected,
+            typed: key,
+            words,
+            wordIdx: currentWordIdx,
+            charIdx: currentCharIdx,
+          }
+        );
         if (status === "correct") statsRef.current.correct++;
         else statsRef.current.incorrect++;
         nextStatuses[`${currentWordIdx}-${currentCharIdx}`] = status;
       } else {
+        mistypeEventsRef.current = recordCharAttempt(
+          mistypeEventsRef.current,
+          charClassStatsRef.current,
+          {
+            expected: " ",
+            typed: key,
+            words,
+            wordIdx: currentWordIdx,
+            charIdx: currentCharIdx,
+          }
+        );
         const extras = nextExtras[currentWordIdx] || [];
         nextExtras[currentWordIdx] = [...extras, key];
         statsRef.current.incorrect++;
@@ -250,6 +363,17 @@ export default function TypingTest({ user }) {
       } else {
         for (let i = currentCharIdx; i < currentWord.length; i++) {
           if (!nextStatuses[`${currentWordIdx}-${i}`]) {
+            mistypeEventsRef.current = recordCharAttempt(
+              mistypeEventsRef.current,
+              charClassStatsRef.current,
+              {
+                expected: currentWord[i],
+                typed: "",
+                words,
+                wordIdx: currentWordIdx,
+                charIdx: i,
+              }
+            );
             nextStatuses[`${currentWordIdx}-${i}`] = "incorrect";
             statsRef.current.incorrect++;
           }
@@ -354,6 +478,39 @@ export default function TypingTest({ user }) {
             </button>
           ))}
         </div>
+
+        {(user?.uid || user?._id || user?.id) && authReady && (
+          <div className="ai-passage-controls" style={{ display: "flex", gap: "8px", flexWrap: "wrap", alignItems: "center", marginBottom: "12px" }}>
+            <input
+              className="input-field"
+              type="text"
+              placeholder="Theme (e.g. ocean, coding)"
+              value={aiTheme}
+              onChange={(e) => setAiTheme(e.target.value)}
+              disabled={isGeneratingPassage || gameState === "running"}
+              style={{ flex: "1 1 180px", minWidth: "160px" }}
+            />
+            <select
+              className="input-field"
+              value={aiDifficulty}
+              onChange={(e) => setAiDifficulty(e.target.value)}
+              disabled={isGeneratingPassage || gameState === "running"}
+            >
+              <option value="easy">Easy</option>
+              <option value="medium">Medium</option>
+              <option value="hard">Hard</option>
+            </select>
+            <button
+              className="btn btn-secondary"
+              type="button"
+              onClick={handleGenerateAiPassage}
+              disabled={isGeneratingPassage || gameState === "running"}
+            >
+              {isGeneratingPassage ? "Generating..." : "AI Passage"}
+            </button>
+            {passageError && <span style={{ color: "#ff6b6b", fontSize: "0.85rem" }}>{passageError}</span>}
+          </div>
+        )}
 
         <div className="top-stats-row">
           <div className="top-stat-group left-group">

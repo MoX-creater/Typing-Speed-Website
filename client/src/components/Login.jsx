@@ -16,8 +16,8 @@ export default function Login({ onLogin }) {
 
       if (!user) return;
 
-    
-      onLogin(user, null); 
+      const idToken = await user.getIdToken();
+      onLogin(user, idToken);
       navigate("/");
 
     } catch (err) {

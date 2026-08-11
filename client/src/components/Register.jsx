@@ -33,7 +33,10 @@ export default function Register({ onLogin }) {
         createdAt: new Date()
       });
 
-      if(onLogin) onLogin(userData, userCredential.user.accessToken);
+      if(onLogin) {
+        const idToken = await userCredential.user.getIdToken();
+        onLogin(userData, idToken);
+      }
       navigate("/");
     } catch (err) {
       setError(err.message || "Registration failed");
