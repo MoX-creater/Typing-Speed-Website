@@ -3,6 +3,7 @@ import { useRoom } from '../hooks/useRoom';
 import MultiplayerRace from './MultiplayerRace';
 import { generateRaceSummary } from '../api';
 import { getAuthToken } from '../../lib/authToken';
+import { getRateLimitError } from '../utils/apiErrors';
 
 /* ── small sub-components ─────────────────────────────────────────────────── */
 
@@ -91,7 +92,11 @@ function RaceResults({ results, socketId, racePerformance, onPlayAgain }) {
         }
       } catch (err) {
         if (!cancelled) {
-          setSummaryError(err.response?.data?.error || "Could not load race summary.");
+          setSummaryError(
+            getRateLimitError(err) ||
+              err.response?.data?.error ||
+              "Could not load race summary."
+          );
         }
       } finally {
         if (!cancelled) {

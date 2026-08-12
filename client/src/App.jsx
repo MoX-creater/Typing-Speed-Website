@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore";
 import { auth, db } from "../lib/firebase";
+import { signOutUser } from "../lib/auth";
 import { isValidToken } from "../lib/authToken";
 import Navbar from "./components/Navbar";
 import TypingTest from "./components/TypingTest";
@@ -13,6 +14,7 @@ import Profile from "./components/Profile";
 import Leaderboard from "./components/Leaderboard";
 import MultiplayerLobby from "./components/MultiplayerLobby";
 import About from "./components/About";
+import Privacy from "./components/Privacy";
 
 function App() {
   const [user, setUser] = useState(null);
@@ -67,10 +69,16 @@ function App() {
     }
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    setUser(null);
+  const handleLogout = async () => {
+    try {
+      await signOutUser();
+    } catch (error) {
+      console.error("Logout failed:", error);
+    } finally {
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      setUser(null);
+    }
   };
 
   return (
@@ -82,6 +90,7 @@ function App() {
         <Route path="/leaderboard" element={<Leaderboard />} />
         <Route path="/multiplayer" element={<MultiplayerLobby user={user} />} />
         <Route path="/about" element={<About />} />
+        <Route path="/privacy" element={<Privacy />} />
         <Route path="/login" element={<Login onLogin={handleLogin} />} />
         <Route path="/register" element={<Register onLogin={handleLogin} />} />
         <Route path="/profile" element={<Profile user={user} />} />

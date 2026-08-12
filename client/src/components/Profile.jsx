@@ -139,7 +139,7 @@ export default function Profile({ user }) {
                 {recentSessions.map((s) => (
                   <tr key={s._id}>
                     <td style={{ fontFamily: "var(--font-sans)" }}>{new Date(s.createdAt).toLocaleString()}</td>
-                    <td style={{ color: "var(--accent-secondary)" }}>{s.wpm.toFixed(1)}</td>
+                    <td style={{ color: "var(--text-primary)" }}>{s.wpm.toFixed(1)}</td>
                     <td style={{ color: s.accuracy >= 95 ? "var(--success)" : "var(--text-primary)" }}>{s.accuracy.toFixed(1)}%</td>
                     <td>{s.duration}s</td>
                   </tr>

@@ -52,7 +52,7 @@ export default function Login({ onLogin }) {
           <button className="btn btn-primary" type="submit" disabled={loading}>
             {loading ? "Signing in..." : "Sign In"}
           </button>
-          <div style={{ margin: "10px 0", textAlign: "center" }}>OR</div>
+          <div className="auth-divider">OR</div>
           <button
             type="button"
             className="btn btn-secondary"

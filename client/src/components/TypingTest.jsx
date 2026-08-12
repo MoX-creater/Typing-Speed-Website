@@ -1,5 +1,5 @@
 import { useRef, useState, useCallback, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "../../lib/firebase";
 import {
@@ -9,6 +9,7 @@ import {
 } from "../utils/typingTelemetry";
 import { generatePassage } from "../api";
 import { getAuthToken } from "../../lib/authToken";
+import { getRateLimitError } from "../utils/apiErrors";
 
 const DURATION_OPTIONS = [15, 30, 60, 120];
 const WPM_SAMPLE_INTERVAL = 5;
@@ -153,7 +154,11 @@ export default function TypingTest({ user, authReady = false }) {
       });
       initGame(duration, data.text);
     } catch (err) {
-      setPassageError(err.response?.data?.error || "Failed to generate passage");
+      setPassageError(
+        getRateLimitError(err) ||
+          err.response?.data?.error ||
+          "Failed to generate passage"
+      );
     } finally {
       setIsGeneratingPassage(false);
     }
@@ -480,7 +485,7 @@ export default function TypingTest({ user, authReady = false }) {
         </div>
 
         {(user?.uid || user?._id || user?.id) && authReady && (
-          <div className="ai-passage-controls" style={{ display: "flex", gap: "8px", flexWrap: "wrap", alignItems: "center", marginBottom: "12px" }}>
+          <div className="ai-passage-controls">
             <input
               className="input-field"
               type="text"
@@ -488,7 +493,6 @@ export default function TypingTest({ user, authReady = false }) {
               value={aiTheme}
               onChange={(e) => setAiTheme(e.target.value)}
               disabled={isGeneratingPassage || gameState === "running"}
-              style={{ flex: "1 1 180px", minWidth: "160px" }}
             />
             <select
               className="input-field"
@@ -508,7 +512,7 @@ export default function TypingTest({ user, authReady = false }) {
             >
               {isGeneratingPassage ? "Generating..." : "AI Passage"}
             </button>
-            {passageError && <span style={{ color: "#ff6b6b", fontSize: "0.85rem" }}>{passageError}</span>}
+            {passageError && <span className="passage-error">{passageError}</span>}
           </div>
         )}
 
@@ -522,11 +526,11 @@ export default function TypingTest({ user, authReady = false }) {
             </div>
           </div>
           <div className="top-stat-group right-group">
-            <div className="stat-box" style={{ textAlign: "right" }}>
+            <div className="stat-box stat-box--right">
               <div className="top-stat-label">WPM</div>
               <div className="top-stat-value">{gameState === "idle" ? "000" : wpm}</div>
             </div>
-            <div className="stat-box" style={{ textAlign: "right" }}>
+            <div className="stat-box stat-box--right">
               <div className="top-stat-label">ACCURACY</div>
               <div className="top-stat-value">{gameState === "idle" ? "100%" : `${accuracy}%`}</div>
             </div>
@@ -570,18 +574,17 @@ export default function TypingTest({ user, authReady = false }) {
         </div>
 
         <div className="typing-footer-hint">
-          <span className="key-hint">TAB</span> + <span className="key-hint">ENTER</span> TO RESTART TEST
+          <span className="key-hint">CTRL</span> + <span className="key-hint">R</span> TO RESTART TEST
         </div>
       </div>
 
       <div className="waves-bg"></div>
 
       <footer className="app-footer">
-        <div className="footer-left">© 2024 LUMINOUS VELOCITY</div>
+        <div className="footer-left">TYPE SPEED TEST</div>
         <div className="footer-right">
-          <a href="#">KEYBOARD SHORTCUTS</a>
-          <a href="#">PRIVACY</a>
-          <a href="#">CONTACT</a>
+          <Link to="/privacy">PRIVACY</Link>
+          <Link to="/about">CONTACT</Link>
         </div>
       </footer>
     </div>
