@@ -1,14 +1,23 @@
 import axios from "axios";
+import { getAuthToken } from "../lib/authToken";
 
-const API = axios.create({ baseURL: "http://localhost:5000/api" });
+const serverBase = (import.meta.env.VITE_SERVER_URL || "http://localhost:5000").replace(/\/$/, "");
+const API = axios.create({ baseURL: `${serverBase}/api` });
 
-API.interceptors.request.use((req) => {
-  if (localStorage.getItem("token")) {
-    req.headers.Authorization = `Bearer ${localStorage.getItem("token")}`;
+API.interceptors.request.use(async (req) => {
+  const token = await getAuthToken();
+  if (token) {
+    req.headers.Authorization = `Bearer ${token}`;
   }
   return req;
 });
 
 export const login = (formData) => API.post("/users/login", formData);
 export const register = (formData) => API.post("/users/register", formData);
-export const saveSession = (sessionData) => API.post("/sessions", sessionData);
+export const saveTypingProfile = (profileData) => API.post("/typing-profile", profileData);
+export const generatePassage = ({ difficulty, theme, duration }) =>
+  API.post("/passages/generate", { difficulty, theme, duration });
+export const generateRaceSummary = (raceData) =>
+  API.post("/races/summary", raceData);
+export const generateTestSummary = (testData) =>
+  API.post("/tests/summary", testData);

@@ -1,4 +1,12 @@
 import { useRef, useState, useEffect, useCallback } from 'react';
+import {
+  buildAccuracyByCharClass,
+  buildAvgWpmOverTime,
+  createEmptyCharClassStats,
+  recordCharAttempt,
+} from '../utils/typingTelemetry';
+
+const WPM_SAMPLE_INTERVAL = 5;
 
 /**
  * MultiplayerRace
@@ -38,6 +46,9 @@ export default function MultiplayerRace({
   const startTimeRef  = useRef(null);
   const statsRef      = useRef({ correct: 0, incorrect: 0 });
   const lastProgressRef = useRef(0);
+  const charClassStatsRef = useRef(createEmptyCharClassStats());
+  const wpmIntervalSamplesRef = useRef([]);
+  const lastWpmIntervalSampleRef = useRef(-1);
   const marginRef     = useRef(0);
   const lastTopRef    = useRef(0);
 
@@ -86,6 +97,16 @@ export default function MultiplayerRace({
       const wpm  = mins > 0 ? Math.round(statsRef.current.correct / 5 / mins) : 0;
       setLiveWpm(wpm);
 
+      const elapsedSec = Math.floor((Date.now() - startTimeRef.current) / 1000);
+      if (
+        elapsedSec > 0 &&
+        elapsedSec % WPM_SAMPLE_INTERVAL === 0 &&
+        elapsedSec > lastWpmIntervalSampleRef.current
+      ) {
+        wpmIntervalSamplesRef.current.push({ second: elapsedSec, wpm });
+        lastWpmIntervalSampleRef.current = elapsedSec;
+      }
+
       // Progress = words fully passed / totalWords  (0–100)
       const progress = Math.round((currentWordIdx / totalWords) * 100);
       if (progress !== lastProgressRef.current) {
@@ -122,10 +143,24 @@ export default function MultiplayerRace({
       if (currentCharIdx < currentWord.length) {
         const expected = currentWord[currentCharIdx];
         const status   = key === expected ? 'correct' : 'incorrect';
+        recordCharAttempt([], charClassStatsRef.current, {
+          expected,
+          typed: key,
+          words,
+          wordIdx: currentWordIdx,
+          charIdx: currentCharIdx,
+        });
         if (status === 'correct') statsRef.current.correct++;
         else statsRef.current.incorrect++;
         nextStatuses[`${currentWordIdx}-${currentCharIdx}`] = status;
       } else {
+        recordCharAttempt([], charClassStatsRef.current, {
+          expected: ' ',
+          typed: key,
+          words,
+          wordIdx: currentWordIdx,
+          charIdx: currentCharIdx,
+        });
         const extras = nextExtras[currentWordIdx] || [];
         nextExtras[currentWordIdx] = [...extras, key];
         statsRef.current.incorrect++;
@@ -140,6 +175,13 @@ export default function MultiplayerRace({
         // mark any untyped chars as incorrect
         for (let i = currentCharIdx; i < currentWord.length; i++) {
           if (!nextStatuses[`${currentWordIdx}-${i}`]) {
+            recordCharAttempt([], charClassStatsRef.current, {
+              expected: currentWord[i],
+              typed: '',
+              words,
+              wordIdx: currentWordIdx,
+              charIdx: i,
+            });
             nextStatuses[`${currentWordIdx}-${i}`] = 'incorrect';
             statsRef.current.incorrect++;
           }
@@ -154,13 +196,27 @@ export default function MultiplayerRace({
           const finalWpm  = elapsed > 0 ? Math.round(statsRef.current.correct / 5 / elapsed) : 0;
           const finalAcc  = total > 0 ? Number(((statsRef.current.correct / total) * 100).toFixed(1)) : 100;
 
+          if (finalWpm > 0) {
+            wpmIntervalSamplesRef.current.push({
+              second: Math.max(1, Math.floor((Date.now() - startTimeRef.current) / 1000)),
+              wpm: finalWpm,
+            });
+          }
+
+          const racePerformance = {
+            avgWpmOverTime: buildAvgWpmOverTime(wpmIntervalSamplesRef.current),
+            accuracyByCharClass: buildAccuracyByCharClass(charClassStatsRef.current),
+            finalWpm,
+            finalAccuracy: finalAcc,
+          };
+
           setDone(true);
           setCharStatuses(nextStatuses);
           setExtraChars(nextExtras);
           setCurrentWordIdx(nextWordIdx);
           setCurrentCharIdx(nextCharIdx);
           sendProgress(100, finalWpm);
-          finishRace(finalWpm, finalAcc);
+          finishRace(finalWpm, finalAcc, racePerformance);
           return;
         }
       }

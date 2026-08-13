@@ -1,6 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRoom } from '../hooks/useRoom';
 import MultiplayerRace from './MultiplayerRace';
+import { generateRaceSummary } from '../api';
+import { getAuthToken } from '../../lib/authToken';
+import { getRateLimitError } from '../utils/apiErrors';
 
 /* ── small sub-components ─────────────────────────────────────────────────── */
 
@@ -46,28 +49,101 @@ function CountdownOverlay({ countdown }) {
 }
 
 /* ── Race results ─────────────────────────────────────────────────────────── */
-function RaceResults({ results, socketId, onPlayAgain }) {
-  const medals = ['🥇', '🥈', '🥉'];
+function formatPlace(place) {
+  if (place === 1) return "1st";
+  if (place === 2) return "2nd";
+  if (place === 3) return "3rd";
+  return `#${place}`;
+}
+
+function RaceResults({ results, socketId, racePerformance, onPlayAgain }) {
+  const [summary, setSummary] = useState(null);
+  const [summaryLoading, setSummaryLoading] = useState(!!racePerformance);
+  const [summaryError, setSummaryError] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function fetchSummary() {
+      if (!racePerformance) {
+        setSummaryError("Performance data unavailable for this race.");
+        setSummaryLoading(false);
+        return;
+      }
+
+      const token = await getAuthToken();
+      if (!token) {
+        setSummaryError("Sign in again to see your AI race summary.");
+        setSummaryLoading(false);
+        return;
+      }
+
+      const myResult = results.find((r) => r.socketId === socketId);
+
+      try {
+        const { data } = await generateRaceSummary({
+          ...racePerformance,
+          placement: myResult?.place,
+          playerCount: results.length,
+        });
+        if (!cancelled) {
+          setSummary(data.summary);
+          setSummaryError("");
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setSummaryError(
+            getRateLimitError(err) ||
+              err.response?.data?.error ||
+              "Could not load race summary."
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setSummaryLoading(false);
+        }
+      }
+    }
+
+    fetchSummary();
+    return () => {
+      cancelled = true;
+    };
+  }, [results, socketId, racePerformance]);
+
   return (
     <div className="mp-card mp-results-card">
-      <h2 className="mp-results-title">Race Over!</h2>
-      <ol className="mp-results-list">
-        {results.map((r) => (
-          <li
-            key={r.socketId}
-            className={`mp-result-row ${r.socketId === socketId ? 'mp-result-row--me' : ''}`}
-          >
-            <span className="mp-result-place">
-              {medals[r.place - 1] ?? `#${r.place}`}
-            </span>
-            <span className="mp-result-name">{r.username}</span>
-            <span className="mp-result-wpm">{r.finalWpm} <small>WPM</small></span>
-            <span className="mp-result-acc">{r.finalAccuracy}%</span>
-          </li>
-        ))}
-      </ol>
+      <h2 className="mp-results-title">Race Over</h2>
+
+      <div className="mp-results-body">
+        <div className="mp-race-summary">
+          <span className="mp-race-summary-label">Performance summary</span>
+          {summaryLoading && <p className="mp-race-summary-text muted">Generating your race summary…</p>}
+          {!summaryLoading && summary && (
+            <p className="mp-race-summary-text">{summary}</p>
+          )}
+          {!summaryLoading && !summary && summaryError && (
+            <p className="mp-race-summary-text muted">{summaryError}</p>
+          )}
+        </div>
+
+        <ol className="mp-results-list">
+          {results.map((r) => (
+            <li
+              key={r.socketId}
+              className={`mp-result-row ${r.socketId === socketId ? 'mp-result-row--me' : ''}`}
+            >
+              <span className="mp-result-place">{formatPlace(r.place)}</span>
+              <span className="mp-result-name">{r.username}</span>
+              <span className="mp-result-wpm">{r.finalWpm} WPM</span>
+              <span className="mp-result-acc">{r.finalAccuracy}%</span>
+            </li>
+          ))}
+        </ol>
+      </div>
+
       <button className="btn btn-primary mp-again-btn" onClick={onPlayAgain}>
-        Back to Lobby
+        Back to lobby
       </button>
     </div>
   );
@@ -81,7 +157,7 @@ export default function MultiplayerLobby({ user }) {
   const {
     connected, socketId,
     roomId, room, error, isHost,
-    racePassage, countdown, playerProgress, raceResults, raceActive,
+    racePassage, countdown, playerProgress, raceResults, myRacePerformance, raceActive,
     createRoom, joinRoom, leaveRoom, toggleReady, clearError,
     startRace, sendProgress, finishRace,
   } = useRoom(user);
@@ -125,8 +201,13 @@ export default function MultiplayerLobby({ user }) {
   if (!user) {
     return (
       <div className="page mp-page">
-        <div className="mp-card mp-auth-prompt">
-          <div className="mp-auth-icon">🔒</div>
+        <div className="mp-auth-prompt">
+          <div className="mp-auth-icon" aria-hidden="true">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+            </svg>
+          </div>
           <h2>Sign in to play</h2>
           <p>You need to be logged in to create or join a multiplayer race.</p>
           <a href="/login" className="btn btn-primary">Sign In</a>
@@ -143,6 +224,7 @@ export default function MultiplayerLobby({ user }) {
         <RaceResults
           results={raceResults}
           socketId={socketId}
+          racePerformance={myRacePerformance}
           onPlayAgain={leaveRoom}
         />
       </div>

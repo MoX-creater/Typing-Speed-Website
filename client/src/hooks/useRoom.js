@@ -43,6 +43,7 @@ export function useRoom(user) {
    * Array<{ place, socketId, username, finalWpm, finalAccuracy }>
    */
   const [raceResults, setRaceResults] = useState(null);
+  const [myRacePerformance, setMyRacePerformance] = useState(null);
   const raceResultSavedRef = useRef(false);
   const userRef = useRef(user);
 
@@ -94,6 +95,7 @@ export function useRoom(user) {
     socket.on('race_started', ({ passage, startTime }) => {
       setRacePassage(passage);
       setRaceResults(null);
+      setMyRacePerformance(null);
       setPlayerProgress([]);
       raceResultSavedRef.current = false;
 
@@ -209,6 +211,7 @@ export function useRoom(user) {
     setCountdown(null);
     setPlayerProgress([]);
     setRaceResults(null);
+    setMyRacePerformance(null);
     setError(null);
   }, []);
 
@@ -239,7 +242,10 @@ export function useRoom(user) {
    * @param {number} wpm      - final WPM
    * @param {number} accuracy - final accuracy 0–100
    */
-  const finishRace = useCallback((wpm, accuracy) => {
+  const finishRace = useCallback((wpm, accuracy, performance = null) => {
+    if (performance) {
+      setMyRacePerformance(performance);
+    }
     socketRef.current?.emit('player_finished', { wpm, accuracy });
   }, []);
 
@@ -263,6 +269,7 @@ export function useRoom(user) {
     countdown,
     playerProgress,
     raceResults,
+    myRacePerformance,
     raceActive,
     // phase 1 actions
     createRoom,
