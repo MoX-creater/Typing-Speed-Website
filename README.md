@@ -1,6 +1,6 @@
 # Typing Speed Web App
 
-A full-stack typing test platform built with **React, Node.js/Express, Socket.io, and Firebase/Firestore**, featuring real-time WPM and accuracy computation, live multiplayer race mode, global leaderboards, and a premium dark-themed UI.
+A full-stack typing test platform built with **React, Node.js/Express, Socket.io, Firebase/Firestore, and Google Gemini**, featuring real-time WPM and accuracy computation, AI-generated adaptive passages, AI performance summaries, live multiplayer race mode, global leaderboards, and a premium dark-themed UI.
 
 **Live demo:** [typing-speed-website-lac.vercel.app](https://typing-speed-website-lac.vercel.app/)
 
@@ -8,53 +8,71 @@ A full-stack typing test platform built with **React, Node.js/Express, Socket.io
 
 - **Real-Time Metrics** — Live WPM, accuracy, and word count updated during typing with low-latency response
 - **Multiple Durations** — Choose from 15s, 30s, 60s, or 120s test sessions
+- **AI-Generated Passages** — Personalized typing passages generated via Google Gemini, adapted to each user's error patterns (frequently mistyped characters/bigrams), with configurable difficulty and theme
+- **AI Performance Summaries** — Post-test natural-language performance analysis generated via Gemini, highlighting speed trends and accuracy patterns, shown on both solo and multiplayer results
 - **Live Multiplayer Race Mode** — Create or join a room and race against other players in real time via Socket.io, with live progress tracking and synced countdown/start
 - **Firebase Authentication** — Secure user accounts via Firebase Auth
 - **Firestore Persistence** — Solo test results and multiplayer race results saved to Firestore, tagged by mode (`solo` / `multiplayer`) with room and rank data for races
 - **Global Leaderboard** — Top typists ranked by best WPM
 - **Profile Dashboard** — Aggregated stats and session history pulled from Firestore
-- **Post-Test Results Screen** — WPM-over-time graph (raw vs. smoothed), consistency score, character breakdown, and full session detail
+- **Post-Test Results Screen** — WPM-over-time graph (raw vs. smoothed), consistency score, character breakdown, AI performance summary, and full session detail
 - **Optimized Rendering** — `useRef` for mutable stats and windowed word rendering to minimize input lag during continuous typing
+
+## AI Integration
+
+- **Adaptive passage generation** — tracks per-user typing errors (mistyped characters/bigrams, WPM-over-time, accuracy by character class) in a rolling Firestore-backed typing profile, and feeds this into a Gemini prompt to generate passages that target the user's specific weak points
+- **Prompt design** — passage prompts constrain length, difficulty, theme, and target error patterns while explicitly guiding the model toward natural, coherent prose over disconnected or awkward filler text
+- **Caching & reuse** — generated passages are cached per user/difficulty/theme combination and reused until enough new error data accumulates or a time threshold passes, reducing redundant API calls
+- **Rate limiting** — per-user cooldown on AI endpoints to prevent abuse and control API costs
+- **Graceful fallback** — new users without typing history, or requests that fail generation/validation, fall back to default passages rather than erroring, so the AI features never block the core typing experience
 
 ## Tech Stack
 
-| Layer      | Technology                                  |
-|------------|----------------------------------------------|
-| Frontend   | React, Vite, React Router                     |
-| Backend    | Node.js, Express, Socket.io                   |
-| Database   | Firebase / Cloud Firestore                    |
-| Auth       | Firebase Authentication                       |
-| Styling    | Vanilla CSS (dark theme, JetBrains Mono)      |
-| Deployment | Backend: Render · Frontend: Vercel            |
+| Layer      | Technology                                     |
+|------------|-------------------------------------------------|
+| Frontend   | React, Vite, React Router                        |
+| Backend    | Node.js, Express, Socket.io                      |
+| AI/LLM     | Google Gemini API (`gemini-3.1-flash-lite`)       |
+| Database   | Firebase / Cloud Firestore                        |
+| Auth       | Firebase Authentication                           |
+| Styling    | Vanilla CSS (dark theme, JetBrains Mono)          |
+| Deployment | Backend: Render · Frontend: Vercel                |
 
 ## Project Structure
 
 ```
 ├── server/
-│   ├── index.js                # Express + Socket.io entry point, CORS
-│   ├── firebaseAdmin.js        # Firebase Admin SDK init (env-based credentials)
-│   ├── socketHandlers.js       # Multiplayer room, race lifecycle, socket events
-│   └── .env                    # PORT, CLIENT_URL, FIREBASE_* credentials
+│   ├── index.js                 # Express + Socket.io entry point, CORS
+│   ├── firebaseAdmin.js         # Firebase Admin SDK init (env-based credentials)
+│   ├── socketHandlers.js        # Multiplayer room, race lifecycle, socket events
+│   ├── routes/
+│   │   └── passages.js          # AI passage generation + AI summary routes
+│   ├── utils/
+│   │   ├── geminiService.js     # Gemini API client (shared across passage + summary generation)
+│   │   ├── buildPassagePrompt.js # Prompt builder for adaptive passage generation
+│   │   ├── buildSummaryPrompt.js # Prompt builder for post-test AI summaries
+│   │   └── rateLimiter.js       # Per-user cooldown for AI endpoints
+│   └── .env                     # PORT, CLIENT_URL, FIREBASE_*, GEMINI_API_KEY
 ├── client/
 │   ├── index.html
 │   ├── vite.config.js
 │   ├── lib/
-│   │   ├── firebase.js         # Firebase client SDK init
+│   │   ├── firebase.js          # Firebase client SDK init
 │   │   └── auth.js
 │   └── src/
 │       ├── main.jsx
-│       ├── App.jsx             # Router + auth state
+│       ├── App.jsx              # Router + auth state
 │       ├── api.js
-│       ├── index.css           # Design system
+│       ├── index.css            # Design system
 │       ├── hooks/
 │       │   ├── useFriends.js
 │       │   └── useRoom.js
 │       └── components/
 │           ├── Navbar.jsx
-│           ├── TypingTest.jsx      # Core typing engine
+│           ├── TypingTest.jsx       # Core typing engine + AI passage request
 │           ├── MultiplayerLobby.jsx
 │           ├── MultiplayerRace.jsx
-│           ├── Results.jsx
+│           ├── Results.jsx          # Results screen + AI performance summary
 │           ├── Login.jsx
 │           ├── Register.jsx
 │           ├── Profile.jsx
@@ -67,6 +85,7 @@ A full-stack typing test platform built with **React, Node.js/Express, Socket.io
 
 - **Node.js** v18+
 - A **Firebase** project with Firestore and Authentication enabled
+- A **Google Gemini API key** ([Google AI Studio](https://aistudio.google.com))
 
 ### Installation
 
@@ -86,7 +105,7 @@ npm install
 
 ### Configuration
 
-**Backend** — copy `server/.env.example` to `server/.env` and fill in your own values (Firebase Admin credentials, JWT secret, etc.):
+**Backend** — copy `server/.env.example` to `server/.env` and fill in your own values (Firebase Admin credentials, JWT secret, Gemini API key, etc.):
 
 ```bash
 cd server
@@ -135,3 +154,4 @@ npm run dev
 - Optimized React state management using `useRef` for high-frequency keystroke tracking to avoid unnecessary re-renders
 - Windowed rendering — only the words near the cursor are rendered from the full passage, minimizing DOM nodes
 - Socket.io progress updates batched to avoid flooding connections during multiplayer races
+- AI passage caching and rate limiting reduce redundant Gemini API calls and control response latency
