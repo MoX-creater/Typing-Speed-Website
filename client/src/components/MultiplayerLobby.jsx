@@ -201,8 +201,13 @@ export default function MultiplayerLobby({ user }) {
   if (!user) {
     return (
       <div className="page mp-page">
-        <div className="mp-card mp-auth-prompt">
-          <div className="mp-auth-icon">🔒</div>
+        <div className="mp-auth-prompt">
+          <div className="mp-auth-icon" aria-hidden="true">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+            </svg>
+          </div>
           <h2>Sign in to play</h2>
           <p>You need to be logged in to create or join a multiplayer race.</p>
           <a href="/login" className="btn btn-primary">Sign In</a>
