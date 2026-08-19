@@ -13,7 +13,12 @@ function isValidToken(token) {
 export async function getAuthToken() {
   const firebaseUser = auth.currentUser;
   if (firebaseUser) {
-    return firebaseUser.getIdToken();
+    try{
+      return firebaseUser.getIdToken();
+    }catch(err){
+      console.log("Failed to refresh firebase token: ", err)
+      return null;
+    }
   }
 
   const stored = localStorage.getItem("token");

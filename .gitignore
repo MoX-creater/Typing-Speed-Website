@@ -7,7 +7,7 @@ server/node_modules/
 .env
 server/.env
 serviceAccountKey.json
-
+client/env
 # Build output
 client/dist/
 

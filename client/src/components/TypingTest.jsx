@@ -154,6 +154,7 @@ export default function TypingTest({ user, authReady = false }) {
       });
       initGame(duration, data.text);
     } catch (err) {
+      console.log("AI passage generation error :", err);
       setPassageError(
         getRateLimitError(err) ||
           err.response?.data?.error ||

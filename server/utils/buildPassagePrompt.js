@@ -1,9 +1,9 @@
 const { getTargetWordCount } = require("./validatePassageResponse");
 
 const READING_LEVELS = {
-  easy: "easy — simple everyday words and short sentences",
-  medium: "medium — varied vocabulary and sentence length",
-  hard: "hard — complex vocabulary, longer sentences, more punctuation variety",
+  easy: "easy — simple everyday words and short sentences, ALL LOWERCASE, ZERO punctuation of any kind",
+  medium: "medium — varied vocabulary and sentence length, normal capitalization, natural use of periods and commas",
+  hard: "hard — complex vocabulary, longer sentences, full punctuation variety (commas, semicolons, colons, quotation marks, apostrophes), mixed case including proper nouns",
 };
 
 function getTopErrors(errorMap = {}, min = 5, max = 8) {
@@ -40,11 +40,18 @@ function buildPassagePrompt(
   const errorPatterns = getErrorPatternList(topErrors);
   const targetWordCount = getTargetWordCount(duration, normalizedDifficulty);
 
-  const prompt = `Write a single typing practice passage.
+  const formattingRule =
+    normalizedDifficulty === "easy"
+      ? "This passage must be entirely lowercase with absolutely no punctuation marks anywhere — not one comma, period, apostrophe, or any other mark."
+      : normalizedDifficulty === "hard"
+      ? "This passage must include varied, natural punctuation (commas, periods, semicolons, quotation marks where appropriate) and complex sentence structures."
+      : "Use standard capitalization and natural punctuation (periods and commas) throughout.";
 
+  const prompt = `Write a single typing practice passage.
 Requirements:
 - Length: exactly ${targetWordCount} words (not sentences, not paragraphs — count words)
 - Reading level: ${READING_LEVELS[normalizedDifficulty]}
+- CRITICAL FORMATTING RULE (follow this exactly, it overrides everything else below): ${formattingRule}
 - Topic: ${normalizedTheme}
 - Naturally include frequent use of these letter patterns, since the typist struggles with them: ${errorPatterns.join(", ")} — weave them into real words, don't force awkward phrasing just to hit them
 - Write ORIGINAL, coherent, sensible prose — like something from a real article, story, or blog post. Not a random word list, not disconnected sentences, not filler.
@@ -52,7 +59,7 @@ Requirements:
 - Do NOT include any preamble like "Here is your passage:" — output ONLY the passage text itself, nothing else
 - Avoid repeating the same sentence structure more than twice in a row
 - Avoid uncommon or awkward words purely to hit character patterns — natural phrasing takes priority over pattern density
-
+${normalizedDifficulty === "easy" ? "Reminder: no punctuation, no capital letters, anywhere in this passage." : ""}
 Output only the passage text.`;
 
   return {
@@ -70,4 +77,4 @@ module.exports = {
   getTopErrors,
   getErrorPatternList,
   READING_LEVELS,
-};
+};;
