@@ -1,4 +1,9 @@
-import { signInWithPopup, GoogleAuthProvider, signOut } from "firebase/auth";
+import {
+  signInWithPopup,
+  GoogleAuthProvider,
+  signOut,
+  signInWithEmailAndPassword,
+} from "firebase/auth";
 import { auth } from "./firebase";
 
 const provider = new GoogleAuthProvider();
@@ -10,6 +15,11 @@ export const signInWithGoogle = async () => {
   } catch (error) {
     console.error(error);
   }
+};
+
+export const signInWithEmail = async (email, password) => {
+  const result = await signInWithEmailAndPassword(auth, email, password);
+  return result.user;
 };
 
 export const signOutUser = async () => {

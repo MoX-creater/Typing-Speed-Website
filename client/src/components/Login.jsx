@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { login } from "../api";
-import { signInWithGoogle } from "../../lib/auth";
+import { signInWithGoogle , signInWithEmail } from "../../lib/auth";
 
 export default function Login({ onLogin }) {
   const [email, setEmail] = useState("");
@@ -30,11 +30,12 @@ export default function Login({ onLogin }) {
     setLoading(true);
     setError("");
     try {
-      const { data } = await login({ email, password });
-      onLogin(data.user, data.token);
+      const user = await signInWithEmail(email, password);
+      const idToken = await user.getIdToken();
+      onLogin(user, idToken);
       navigate("/");
     } catch (err) {
-      setError(err.response?.data?.message || "Login failed");
+      setError("Login failed. Check your email and password.");
     } finally {
       setLoading(false);
     }
