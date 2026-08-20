@@ -5,8 +5,19 @@ const { Server } = require('socket.io');
 const cors = require('cors');
 const { setupSocket } = require('./socketHandlers');
 const firebaseAdmin = require('./firebaseAdmin');
+const rateLimit = require("express-rate-limit");
+
+const globalLimiter = rateLimit({
+     windowMs: 60 * 1000, // 1 minute
+     max: 100, // max 100 requests per IP per minute
+     standardHeaders: true,
+     legacyHeaders: false,
+     message: { error: "Too many requests, please try again shortly." },
+});
 
 const app = express();
+app.use(globalLimiter);
+
 const clientUrl = (process.env.CLIENT_URL || process.env.FRONTEND_URL || "http://localhost:5173").trim();
 app.use(cors({ origin: clientUrl, methods: ["GET", "POST"] }));
 app.use(express.json());
@@ -19,7 +30,6 @@ app.use("/api", typingProfileRoutes);
 app.use("/api", passagesRoutes);
 app.use("/api", racesRoutes);
 app.use("/api", testsRoutes);
-
 // Create the HTTP server using Express
 const server = http.createServer(app);
 
