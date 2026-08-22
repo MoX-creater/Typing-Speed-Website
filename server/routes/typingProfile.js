@@ -1,5 +1,6 @@
 const express = require("express");
 const firebaseAdmin = require("../firebaseAdmin");
+const { getFirestore } = require("firebase-admin/firestore");
 const { mergeTypingProfile } = require("../utils/mergeTypingProfile");
 
 const router = express.Router();
@@ -10,8 +11,7 @@ function getProfileRef(userId) {
     throw new Error("Firebase Admin is not configured");
   }
 
-  return firebaseAdmin
-    .firestore()
+  return getFirestore()
     .collection("users")
     .doc(userId)
     .collection("typingProfile")

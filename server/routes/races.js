@@ -3,6 +3,7 @@ const { requireAuth } = require("../middleware/auth");
 const { aiGenerationRateLimit } = require("../utils/rateLimiter");
 const { buildSummaryPrompt } = require("../utils/buildSummaryPrompt");
 const { generateValidatedSummary } = require("../utils/generateValidatedSummary");
+const { loadTypingProfile } = require("./passages");
 
 const router = express.Router();
 
@@ -21,6 +22,8 @@ router.post(
   } = req.body || {};
 
   try {
+    const { profile: typingProfile } = await loadTypingProfile(req.userId);
+
     const { prompt } = buildSummaryPrompt(
       {
         avgWpmOverTime,
@@ -30,7 +33,8 @@ router.post(
         placement,
         playerCount,
       },
-      "race"
+      "race",
+      typingProfile
     );
 
     const generation = await generateValidatedSummary(prompt, "race-summary");

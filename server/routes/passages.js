@@ -1,5 +1,6 @@
 const express = require("express");
 const firebaseAdmin = require("../firebaseAdmin");
+const { getFirestore, FieldValue } = require("firebase-admin/firestore");
 const { requireAuth } = require("../middleware/auth");
 const { aiGenerationRateLimit } = require("../utils/rateLimiter");
 const { buildPassagePrompt } = require("../utils/buildPassagePrompt");
@@ -21,8 +22,7 @@ const PROFILE_DOC_ID = "current";
 const VALID_DIFFICULTIES = ["easy", "medium", "hard"];
 
 function getProfileRef(userId) {
-  return firebaseAdmin
-    .firestore()
+  return getFirestore()
     .collection("users")
     .doc(userId)
     .collection("typingProfile")
@@ -55,8 +55,7 @@ async function resetPassageTestCounter(userId) {
 
 async function findLatestMatchingPassage(userId, difficulty, theme) {
   try {
-    const snapshot = await firebaseAdmin
-      .firestore()
+    const snapshot = await getFirestore()
       .collection("passages")
       .where("userId", "==", userId)
       .where("difficulty", "==", difficulty)
@@ -131,10 +130,10 @@ async function savePassageDoc({
     targetWordCount,
     basedOnErrors,
     usedFallback,
-    createdAt: firebaseAdmin.firestore.FieldValue.serverTimestamp(),
+    createdAt: FieldValue.serverTimestamp(),
   };
 
-  return firebaseAdmin.firestore().collection("passages").add(passageDoc);
+  return getFirestore().collection("passages").add(passageDoc);
 }
 
 async function respondWithDefaultPassage(res, {

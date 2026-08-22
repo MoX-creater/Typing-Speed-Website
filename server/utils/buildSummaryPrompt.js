@@ -1,3 +1,5 @@
+const { getTopErrors, getErrorPatternList } = require("./buildPassagePrompt");
+
 function formatWpmTrend(avgWpmOverTime = [], sessionLabel = "race") {
   const label = sessionLabel === "test" ? "test" : "race";
 
@@ -49,7 +51,26 @@ function formatPlacement(placement, playerCount) {
   return `Final placement: ${placement} out of ${playerCount} players.`;
 }
 
-function buildSummaryPrompt(performanceData = {}, context = "race") {
+function formatErrorPatterns(typingProfile) {
+  if (!typingProfile || !typingProfile.errorMap) {
+    return null;
+  }
+
+  const topErrors = getTopErrors(typingProfile.errorMap);
+  const patterns = getErrorPatternList(topErrors);
+
+  // If getErrorPatternList returned the fallback, there are no real errors
+  if (
+    topErrors.length === 0 ||
+    (patterns.length === 1 && patterns[0] === "varied common English letter combinations")
+  ) {
+    return null;
+  }
+
+  return patterns;
+}
+
+function buildSummaryPrompt(performanceData = {}, context = "race", typingProfile = null) {
   const {
     avgWpmOverTime = [],
     accuracyByCharClass = {},
@@ -76,6 +97,17 @@ function buildSummaryPrompt(performanceData = {}, context = "race") {
   const dataLabel = isSolo ? "Test data:" : "Race data:";
   const sessionWord = isSolo ? "test" : "race";
 
+  const errorPatterns = formatErrorPatterns(typingProfile);
+  const hasHistory = errorPatterns !== null && errorPatterns.length > 0;
+
+  const historyBlock = hasHistory
+    ? `- Persistent trouble spots based on their typing history: ${errorPatterns.join(", ")}`
+    : "";
+
+  const specificnessRule = hasHistory
+    ? `Be SPECIFIC — name the actual characters or letter combinations they struggle with (e.g. "you consistently mistype 'th' and 'ing'"), not vague categories like "symbols" or "letters." Reference whether this ${sessionWord} shows improvement on those specific patterns or not, if the data suggests it.`
+    : `Note any weaker accuracy areas if the data shows them. Since this is a new user with no history, base feedback only on this ${sessionWord}'s data.`;
+
   const prompt = `${intro}
 
 ${dataLabel}
@@ -84,8 +116,8 @@ ${dataLabel}
 - ${placementLine}
 - ${wpmTrend}
 - ${accuracyBreakdown}
-
-Write 2-3 sentences of natural, encouraging feedback in plain language. Mention whether their speed trended up, down, or stayed steady during the ${sessionWord}, note any weaker accuracy areas (letters, numbers, or symbols) if the data shows them, and end with one encouraging or constructive note.
+${historyBlock ? `${historyBlock}\n` : ""}
+Write 2-3 sentences of natural, encouraging but specific feedback in plain language. Mention whether their speed trended up, down, or stayed steady during the ${sessionWord}. ${specificnessRule} Keep it constructive and actionable, not just praise.
 
 Rules:
 - Output ONLY the summary text.
@@ -101,4 +133,5 @@ module.exports = {
   buildSummaryPrompt,
   formatWpmTrend,
   formatAccuracyByClass,
+  formatErrorPatterns,
 };
